@@ -34,6 +34,8 @@ extern crate stable_mir;
 extern crate tempfile;
 
 mod args;
+#[cfg(feature = "lean")]
+mod codegen_lean;
 #[cfg(feature = "cprover")]
 mod codegen_cprover_gotoc;
 mod kani_compiler;
