@@ -9,6 +9,7 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [dependencies]
+lean_ast = { path = "../lean_ast", optional = true}
 cbmc = { path = "../cprover_bindings", package = "cprover_bindings", optional = true }
 clap = { version = "4.1.3", features = ["derive", "cargo"] }
 home = "0.5"
@@ -27,7 +28,8 @@ tracing-subscriber = {version = "0.3.8", features = ["env-filter", "json", "fmt"
 
 # Future proofing: enable backend dependencies using feature.
 [features]
-default = ['cprover']
+default = ['lean', 'cprover']
+lean = ['lean_ast']
 cprover = ['cbmc', 'num', 'serde']
 write_json_symtab = []
 

@@ -4,6 +4,20 @@
 use strum_macros::{AsRefStr, EnumString, EnumVariantNames};
 use tracing_subscriber::filter::Directive;
 
+
+#[derive(Debug, Default, Clone, Copy, AsRefStr, EnumString, EnumVariantNames, PartialEq, Eq)]
+#[strum(serialize_all = "snake_case")]
+pub enum BackendOption {
+    /// Lean backend
+    Lean,
+
+    /// CProver (Goto) backend
+    CProver,
+
+    /// Backend option was not explicitly set
+    #[default]
+    None,
+}
 #[derive(Debug, Default, Clone, Copy, AsRefStr, EnumString, EnumVariantNames, PartialEq, Eq)]
 #[strum(serialize_all = "snake_case")]
 pub enum ReachabilityType {
@@ -71,4 +85,6 @@ pub struct Arguments {
     #[clap(long)]
     /// A legacy flag that is now ignored.
     goto_c: bool,
+    #[clap(long = "backend", default_value = "none")]
+    pub backend: BackendOption,
 }

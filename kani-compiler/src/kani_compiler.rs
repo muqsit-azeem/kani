@@ -15,7 +15,9 @@
 //! in order to apply the stubs. For the subsequent runs, we add the stub configuration to
 //! `-C llvm-args`.
 
-use crate::args::{Arguments, ReachabilityType};
+use crate::args::{Arguments, BackendOption, ReachabilityType};
+#[cfg(feature = "lean")]
+use crate::codegen_lean::LeanCodegenBackend;
 #[cfg(feature = "cprover")]
 use crate::codegen_cprover_gotoc::GotocCodegenBackend;
 use crate::kani_middle::attributes::is_proof_harness;
@@ -55,16 +57,51 @@ pub fn run(args: Vec<String>) -> ExitCode {
     }
 }
 
-/// Configure the cprover backend that generate goto-programs.
-#[cfg(feature = "cprover")]
+/// Configure the lean backend that generates lean programs.
+fn lean_backend(_queries: Arc<Mutex<QueryDb>>) -> Box<dyn CodegenBackend> {
+    #[cfg(feature = "lean")]
+    return Box::new(LeanCodegenBackend::new(_queries));
+    #[cfg(not(feature = "lean"))]
+    rustc_session::early_error(
+        ErrorOutputType::default(),
+        "`--backend lean` requires enabling the `lean` feature",
+    )
+}
+
+/// Configure the cprover backend that generates goto-programs.
+fn cprover_backend(_queries: Arc<Mutex<QueryDb>>) -> Box<dyn CodegenBackend> {
+    #[cfg(feature = "cprover")]
+    return Box::new(GotocCodegenBackend::new(_queries));
+    #[cfg(not(feature = "cprover"))]
+    rustc_session::early_error(
+        ErrorOutputType::default(),
+        "`--backend cprover` requires enabling the `cprover` feature",
+    );
+}
+
+#[cfg(any(feature = "cprover", feature = "lean"))]
 fn backend(queries: Arc<Mutex<QueryDb>>) -> Box<dyn CodegenBackend> {
-    Box::new(GotocCodegenBackend::new(queries))
+    let backend = queries.lock().unwrap().args().backend;
+    match backend {
+        BackendOption::None => {
+            // priority list of backends
+            if cfg!(feature = "cprover") {
+                cprover_backend(queries)
+            } else if cfg!(feature = "lean") {
+                lean_backend(queries)
+            } else {
+                unreachable!();
+            }
+        }
+        BackendOption::CProver => cprover_backend(queries),
+        BackendOption::Lean => lean_backend(queries),
+    }
 }
 
 /// Fallback backend. It will trigger an error if no backend has been enabled.
-#[cfg(not(feature = "cprover"))]
+#[cfg(not(any(feature = "cprover", feature = "boogie")))]
 fn backend(queries: Arc<Mutex<QueryDb>>) -> Box<CodegenBackend> {
-    compile_error!("No backend is available. Only supported value today is `cprover`");
+    compile_error!("No backend is available. Only supported value today are `cprover` and `lean`");
 }
 
 /// A stable (across compilation sessions) identifier for the harness function.

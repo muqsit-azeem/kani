@@ -1,0 +1,13 @@
+# Copyright Kani Contributors
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+[package]
+name= "lean_ast"
+version = "0.34.0"
+edition = "2021"
+license = "MIT or Apache-2.0"
+publish = false
+
+# See more kays and their definition at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+num-bigint = "0.4.4"

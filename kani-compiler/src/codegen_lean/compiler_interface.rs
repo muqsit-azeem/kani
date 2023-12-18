@@ -143,7 +143,7 @@ impl LeanCodegenBackend {
         let mut lcx = LeanCtx::new(tcx, (*self.queries.lock().unwrap()).clone());
         check_reachable_items(tcx, &lcx.queries, &items);
 
-        println!("Hi, this is Kani with Lean backend!");
+        println!("Hi, this is Kani with the Lean backend!");
 
         with_timer(
             || {
@@ -152,7 +152,7 @@ impl LeanCodegenBackend {
                     match *item {
                         MonoItem::Fn(instance) => {
                             if let Some(procedure) = lcx.codegen_function(instance) {
-                                lcx.add_procedure(procedure);
+                                lcx.add_function(procedure);
                             }
                         }
                         MonoItem::Static(_def_id) => {}
@@ -564,7 +564,7 @@ impl<'tcx> LeanCodegenResults<'tcx> {
     }
 }
 
-// TODO: Again: is this necessary - prbably for something else but not for CBMC
+// TODO: Again: is this necessary - probably for something else but not for CBMC
 /// Builds a machine model which is required by CBMC
 fn new_machine_model(sess: &Session) -> MachineModel {
     // The model assumes a `x86_64-unknown-linux-gnu`, `x86_64-apple-darwin`
