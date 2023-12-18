@@ -24,7 +24,7 @@ use rustc_middle::ty::{self, Instance, IntTy, Ty, TyCtxt, UintTy};
 use rustc_span::Span;
 use rustc_target::abi::{HasDataLayout, TargetDataLayout};
 use std::collections::hash_map::Entry;
-use serde::de::Unexpected::Option;
+// use serde::de::Unexpected::Option;
 use strum::IntoEnumIterator;
 use tracing::{debug, debug_span, trace};
 
@@ -200,7 +200,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     }
 
     // TODO: Done first pass
-    fn codegen_statement(&self, stmt: &Statement<'tcx>) -> Stmt {
+    fn codegen_statement(&self, stmt: &Statement<'tcx>) -> Option<Stmt> {
         match &stmt.kind {
             StatementKind::Assign(box (place, rvalue)) => {
                 debug!(?place, ?rvalue, "codegen_statement");
@@ -234,7 +234,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     fn codegen_rvalue(&self, rvalue: &Rvalue<'tcx>) -> (Option<Stmt>, Expr) {
         debug!(rvalue=?rvalue, "codegen_rvalue");
         match rvalue {
-            Rvalue::Use(operand) => (None, self.codegen_operand(operand)),
+            // Rvalue::Use(operand) => (None, self.codegen_operand(operand)),
             Rvalue::UnaryOp(op, operand) => self.codegen_unary_op(op, operand),
             Rvalue::BinaryOp(binop, box (lhs, rhs)) => self.codegen_binary_op(binop, lhs, rhs),
             _ => todo!(),
@@ -278,7 +278,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             // BinOp::And => Expr::BinaryOp { op: BinaryOp::And, left, right },
             // BinOp::Or => Expr::BinaryOp { op: BinaryOp::Or, left, right },
 
-            BinyOp::Sub => Expr::BinaryOp { op: BinaryOp::Sub, left, right },
+            BinOp::Sub => Expr::BinaryOp { op: BinaryOp::Sub, left, right },
             BinOp::Mul => Expr::BinaryOp { op: BinaryOp::Mul, left, right },
             BinOp::Div => Expr::BinaryOp { op: BinaryOp::Div, left, right },
 
@@ -411,8 +411,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         debug!(kind=?ty.kind(), "codegen_scalar");
         match (s, ty.kind()) {
             (Scalar::Int(_), ty::Bool) => Expr::Literal(Literal::Bool(s.to_bool().unwrap())),
-            (Scalar::Int(_), ty::Int) => Expr::Literal(Literal::Int(s.to_int().unwrap())),
-            (Scalar::Int(_), ty::Uint) => Expr::Literal(Literal::Nat(s.to_int().unwrap())),
+            (Scalar::Int(_), ty::Int(_)) => Expr::Literal(Literal::Int(s.to_int().unwrap())),
+            (Scalar::Int(_), ty::Uint(_)) => Expr::Literal(Literal::Nat(s.to_int().unwrap())),
             _ => todo!(),
         }
     }

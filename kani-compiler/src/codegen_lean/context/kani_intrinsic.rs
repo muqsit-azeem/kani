@@ -46,48 +46,48 @@ pub fn get_kani_intrinsic<'tcx>(
 }
 
 //todo: Clarify this again
-impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
-    pub fn codegen_kani_intrinsic(
-        &self,
-        intrinsic: KaniIntrinsic,
-        instance: Instance<'tcx>,
-        fargs: Vec<Expr>,
-        assign_to: Place<'tcx>,
-        target: Option<BasicBlock>,
-        span: Option<Span>,
-    ) -> (Stmt | Paramertr)
-    //todo: (None, Hypothesis) or (Theorem, None) or both
-    {
-        match intrinsic {
-            KaniIntrinsic::KaniAssert => {
-                self.codegen_kani_assert(instance, fargs, assign_to, target, span)
-            }
-            KaniIntrinsic::KaniAssume => {
-                self.codegen_kani_assume(instance, fargs, assign_to, target, span)
-            }
-        }
-    }
+// impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
+    // pub fn codegen_kani_intrinsic(
+    //     &self,
+    //     intrinsic: KaniIntrinsic,
+    //     instance: Instance<'tcx>,
+    //     fargs: Vec<Expr>,
+    //     assign_to: Place<'tcx>,
+    //     target: Option<BasicBlock>,
+    //     span: Option<Span>,
+    // ) -> (Stmt | Paramertr)
+    // //todo: (None, Hypothesis) or (Theorem, None) or both
+    // {
+    //     match intrinsic {
+    //         KaniIntrinsic::KaniAssert => {
+    //             self.codegen_kani_assert(instance, fargs, assign_to, target, span)
+    //         }
+    //         KaniIntrinsic::KaniAssume => {
+    //             self.codegen_kani_assume(instance, fargs, assign_to, target, span)
+    //         }
+    //     }
+    // }
 
-    pub fn codegen_kani_assert(
-        &self,
-        _instance: Instance<'tcx>,
-        mut _fargs: Vec<Expr>,
-        _assign_to: Place<'tcx>,
-        _target: Option<BasicBlock>,
-        _span: Option<Span>,
-    ) -> Thm {
-        Theorem {}
-    }
-
-    // TODO: Hypothesis as an input
-    pub fn codegen_kani_assume(
-        &self,
-        _instance: Instance<'tcx>,
-        mut _fargs: Vec<Expr>,
-        _assign_to: Place<'tcx>,
-        _target: Option<BasicBlock>,
-        _span: Option<Span>,
-    ) -> Parameter{
-        Parameter{ name: "h".to_string(), typ: Type::Bool }
-    }
-}
+    // pub fn codegen_kani_assert(
+    //     &self,
+    //     _instance: Instance<'tcx>,
+    //     mut _fargs: Vec<Expr>,
+    //     _assign_to: Place<'tcx>,
+    //     _target: Option<BasicBlock>,
+    //     _span: Option<Span>,
+    // ) -> Thm {
+    //     Theorem {}
+    // }
+    //
+    // // TODO: Hypothesis as an input
+    // pub fn codegen_kani_assume(
+    //     &self,
+    //     _instance: Instance<'tcx>,
+    //     mut _fargs: Vec<Expr>,
+    //     _assign_to: Place<'tcx>,
+    //     _target: Option<BasicBlock>,
+    //     _span: Option<Span>,
+    // ) -> Parameter{
+    //     Parameter{ name: "h".to_string(), typ: Type::Bool }
+    // }
+// }

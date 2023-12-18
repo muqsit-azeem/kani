@@ -53,7 +53,7 @@ pub enum Literal {
 
 /// Lean parameters
 pub struct Parameter {
-    pub name: String,
+    name: String,
     typ: Type,
 }
 
