@@ -93,12 +93,10 @@ impl Function {
         // if let Some(body) = &self.body {
         write!(writer, "Id.run do")?;
         writeln!(writer)?;
-        writer.increase_indent();
         writer.indent()?;
         for stmt in self.body.iter().clone(){
             stmt.write_to(writer)?;
         }
-        writer.decrease_indent();
         writeln!(writer)?;
         Ok(())
     }
@@ -160,6 +158,12 @@ impl Stmt {
                 writeln!(writer, "else")?;
                 else_branch.write_to(writer)?;
             }
+            Stmt::Return {expr} => {
+                writer.indent()?;
+                write!(writer, "return ",)?;
+                expr.write_to(writer)?;
+            }
+
             _ => {
                 todo!()
             }
@@ -363,7 +367,7 @@ mod tests {
                 //Todo: how to have multiple hypothesis -- Option/Vec?
                 // One way could be to always have `true` as a hypothesis (to have vec)
                 hypothesis: None,
-                return_type: Some(Type::Bool),
+                return_type: Some(Type::Int),
                 body: vec![
                         Stmt::Assignment {
                             variable: "x".to_string(),
@@ -390,6 +394,7 @@ mod tests {
                                 value: Expr::Literal(Literal::Int(10.into())),
                             }),
                         },
+                        Stmt::Return {expr: Expr::Variable { name: "y".to_string() }},
                         // Stmt::Assert {
                         //     condition: Expr::BinaryOp {
                         //         op: BinaryOp::Eq,
@@ -424,14 +429,14 @@ mod tests {
         let expected = String::from(
             "\
 -- Functions definition:
-def main : Bool := Id.run do
-    x := 1
-  y := 2
+def main : Int := Id.run do
+x := 1
+y := 2
 if x = 1 then
-  y := 5
+y := 5
 else
-  y := 10
-
+y := 10
+return y
 ",
         );
         assert_eq!(program_text, expected);
