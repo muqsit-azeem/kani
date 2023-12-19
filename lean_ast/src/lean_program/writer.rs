@@ -76,7 +76,6 @@ impl Function {
         write!(writer, "def ")?;
         write!(writer, "{}", self.name)?;
         // parameters
-        write!(writer, "")?;
         for (_i, param) in self.parameters.iter().enumerate() {
             write!(writer, " (")?;
             write!(writer, "{}: ", param.name)?;
@@ -92,7 +91,7 @@ impl Function {
 
         write!(writer, " := ")?;
         // if let Some(body) = &self.body {
-        write!(writer, "Id.run do ")?;
+        write!(writer, "Id.run do")?;
         writeln!(writer)?;
         writer.increase_indent();
         writer.indent()?;
@@ -100,12 +99,7 @@ impl Function {
             stmt.write_to(writer)?;
         }
         writer.decrease_indent();
-        writer.newline()?;
         writeln!(writer)?;
-        // } else {
-        //     writeln!(writer, "")?;
-        // }
-        writer.newline()?;
         Ok(())
     }
 }
@@ -157,6 +151,14 @@ impl Stmt {
                 for s in statements {
                     s.write_to(writer)?;
                 }
+            }
+            Stmt::IfThenElse {cond, then_branch, else_branch} => {
+                write!(writer, "if ")?;
+                cond.write_to(writer)?;
+                writeln!(writer, " then")?;
+                then_branch.write_to(writer)?;
+                writeln!(writer, "else")?;
+                else_branch.write_to(writer)?;
             }
             _ => {
                 todo!()
@@ -347,6 +349,7 @@ impl BinaryOp {
 
 #[cfg(test)]
 mod tests {
+    use crate::lean_program::Stmt::Assignment;
     use super::*;
 
     #[test]
@@ -370,13 +373,23 @@ mod tests {
                             variable: "y".to_string(),
                             value: Expr::Literal(Literal::Int(2.into())),
                         },
-                        // Stmt::Assert {
-                        //     condition: Expr::BinaryOp {
-                        //         op: BinaryOp::Eq,
-                        //         left: Box::new(Expr::Variable { name: "x".to_string() }),
-                        //         right: Box::new(Expr::Literal(Literal::Int(1.into()))),
-                        //     },
-                        // },
+                        Stmt::IfThenElse {
+                            cond: Expr::BinaryOp {
+                                op: BinaryOp::Eq,
+                                left: Box::new(Expr::Variable { name: "x".to_string() }),
+                                right: Box::new(Expr::Literal(Literal::Int(1.into()))),
+                            },
+                            then_branch: Box::new(Stmt::Assignment {
+                                variable: "y".to_string(),
+                                value: Expr::Literal(Literal::Int(5.into())),
+                            }),
+                            //todo: for now assuming that `else` will always be there
+                            // which is not true -- make `else` optional
+                            else_branch: Box::new(Stmt::Assignment {
+                                variable: "y".to_string(),
+                                value: Expr::Literal(Literal::Int(10.into())),
+                            }),
+                        },
                         // Stmt::Assert {
                         //     condition: Expr::BinaryOp {
                         //         op: BinaryOp::Eq,
@@ -410,32 +423,15 @@ mod tests {
 
         let expected = String::from(
             "\
-// Functions:
-def main (x: Int) (y: Int) -> (z: Int)
+-- Functions definition:
+def main : Bool := Id.run do
+    x := 1
+  y := 2
+if x = 1 then
+  y := 5
+else
+  y := 10
 
-
-// Functions:
-function {:inline} isZero(x: int) returns (bool) {
-  (x == 0)
-}
-
-function {:bvbuiltin \"bvand\"} $BvAnd<T>(lhs: T, rhs: T) returns (T);
-// Procedures:
-procedure main() returns (z: bool)
-  ensures (z == true);
-{
-  var x: int;
-  var y: int;
-  x := 1;
-  y := 2;
-  assert (x == 1);
-  assert (y == 2);
-  if ((x < y)) {
-    z := true;
-  } else {
-    z := false;
-  }
-}
 ",
         );
         assert_eq!(program_text, expected);

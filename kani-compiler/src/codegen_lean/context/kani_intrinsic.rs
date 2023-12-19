@@ -7,7 +7,7 @@
 
 use super::lean_ctx::FunctionCtx;
 
-use lean_ast::lean_program::{Expr, Stmt, Theorem, Parameter};
+use lean_ast::lean_program::{Expr, Stmt, Theorem, Parameter, Hypothesis};
 use rustc_middle::mir::{BasicBlock, Place};
 use rustc_middle::ty::{Instance, TyCtxt};
 use rustc_span::Span;
@@ -15,6 +15,7 @@ use std::str::FromStr;
 use strum::VariantNames;
 use strum_macros::{EnumString, EnumVariantNames};
 use tracing::debug;
+use lean_ast::lean_program::Literal::Int;
 use lean_ast::lean_program::Stmt::Thm;
 
 // TODO: move this enum up to `kani_middle`
@@ -26,6 +27,7 @@ pub enum KaniIntrinsic {
     /// Kani assume statement (`kani::assume`)
     KaniAssume,
 }
+
 
 /// If provided function is a Kani intrinsic (e.g. assert, assume, cover), returns it
 // TODO: move this function up to `kani_middle` along with the enum
@@ -46,48 +48,61 @@ pub fn get_kani_intrinsic<'tcx>(
 }
 
 //todo: Clarify this again
-// impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
-    // pub fn codegen_kani_intrinsic(
-    //     &self,
-    //     intrinsic: KaniIntrinsic,
-    //     instance: Instance<'tcx>,
-    //     fargs: Vec<Expr>,
-    //     assign_to: Place<'tcx>,
-    //     target: Option<BasicBlock>,
-    //     span: Option<Span>,
-    // ) -> (Stmt | Paramertr)
-    // //todo: (None, Hypothesis) or (Theorem, None) or both
-    // {
-    //     match intrinsic {
-    //         KaniIntrinsic::KaniAssert => {
-    //             self.codegen_kani_assert(instance, fargs, assign_to, target, span)
-    //         }
-    //         KaniIntrinsic::KaniAssume => {
-    //             self.codegen_kani_assume(instance, fargs, assign_to, target, span)
-    //         }
-    //     }
-    // }
+impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
+    pub fn codegen_kani_intrinsic(
+        &self,
+        intrinsic: KaniIntrinsic,
+        instance: Instance<'tcx>,
+        fargs: Vec<Expr>,
+        assign_to: Place<'tcx>,
+        target: Option<BasicBlock>,
+        span: Option<Span>,
+    ) -> Stmt
+    //todo: (None, Hypothesis) or (Theorem, None) or both
+    {
+        match intrinsic {
+            KaniIntrinsic::KaniAssert => {
+                self.codegen_kani_assert(instance, fargs, assign_to, target, span)
+            }
+            KaniIntrinsic::KaniAssume => {
+                self.codegen_kani_assume(instance, fargs, assign_to, target, span)
+            }
+        }
+    }
 
-    // pub fn codegen_kani_assert(
-    //     &self,
-    //     _instance: Instance<'tcx>,
-    //     mut _fargs: Vec<Expr>,
-    //     _assign_to: Place<'tcx>,
-    //     _target: Option<BasicBlock>,
-    //     _span: Option<Span>,
-    // ) -> Thm {
-    //     Theorem {}
-    // }
-    //
-    // // TODO: Hypothesis as an input
-    // pub fn codegen_kani_assume(
-    //     &self,
-    //     _instance: Instance<'tcx>,
-    //     mut _fargs: Vec<Expr>,
-    //     _assign_to: Place<'tcx>,
-    //     _target: Option<BasicBlock>,
-    //     _span: Option<Span>,
-    // ) -> Parameter{
-    //     Parameter{ name: "h".to_string(), typ: Type::Bool }
-    // }
-// }
+    pub fn codegen_kani_assert(
+        &self,
+        _instance: Instance<'tcx>,
+        mut fargs: Vec<Expr>,
+        _assign_to: Place<'tcx>,
+        _target: Option<BasicBlock>,
+        _span: Option<Span>,
+    ) -> Stmt {
+        assert_eq!(fargs.len(), 1); // 2);
+        let expr = fargs.remove(0);
+        //TODO: Fix this relate to result
+        // TODO: handle message
+        // TODO: handle location
+        //let stmt = Stmt::IfThenElse { cond: expr, then_branch: expr1  , else_branch: expr2 };
+        //todo:TEMP hardcoding
+        let stmt= Stmt::Assignment {variable:"x".to_string(), value:Expr::Literal(Int(2.into()))};
+        stmt
+    }
+
+    // TODO: Hypothesis as an input
+    pub fn codegen_kani_assume(
+        &self,
+        _instance: Instance<'tcx>,
+        mut _fargs: Vec<Expr>,
+        _assign_to: Place<'tcx>,
+        _target: Option<BasicBlock>,
+        _span: Option<Span>,
+    ) -> Stmt {
+        todo!()
+    }
+}
+
+
+
+
+

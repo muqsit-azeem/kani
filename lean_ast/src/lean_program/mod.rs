@@ -151,7 +151,8 @@ pub enum Expr {
     /// Key points: Can be assigned to variables, passed as args, and
     /// can be return value of a function
     /// Functions are pure -- `without` side effects -- map input to output deterministically
-    FunctionCall { name: String, arguments: Vec<Expr> }
+    FunctionCall { name: String, arguments: Vec<Expr> },
+
 }
 
 /// Lean Statement
@@ -174,6 +175,12 @@ pub enum Stmt {
 
     /// Statement block: `{ statements }`
     Block { statements: Vec<Stmt> },
+
+    //todo: for now assuming that `else` will always be there
+    // which is not true -- make `else` optional
+    IfThenElse {cond: Expr, then_branch: Box<Stmt>, else_branch: Box<Stmt>},
+
+    Return { expr: Expr},
 
     /// Lemmata are statements
     Lem(Lemma),

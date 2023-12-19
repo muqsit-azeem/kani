@@ -317,26 +317,28 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         let funct = self.operand_ty(func);
         // TODO: Only Kani intrinsics are handled currently
         match &funct.kind() {
-            // ty::FnDef(defid, substs) => {
-            //     let instance = Instance::expect_resolve(
-            //         self.tcx(),
-            //         ty::ParamEnv::reveal_all(),
-            //         *defid,
-            //         substs,
-            //     );
-            //
-            //     if let Some(intrinsic) = get_kani_intrinsic(self.tcx(), instance) {
-            //         return self.codegen_kani_intrinsic(
-            //             intrinsic,
-            //             instance,
-            //             fargs,
-            //             *destination,
-            //             *target,
-            //             Some(span),
-            //         );
-            //     }
-            //     todo!()
-            // }
+            ty::FnDef(defid, substs) => {
+                let instance = Instance::expect_resolve(
+                    self.tcx(),
+                    ty::ParamEnv::reveal_all(),
+                    *defid,
+                    substs,
+                );
+
+                if let Some(intrinsic) = get_kani_intrinsic(self.tcx(), instance) {
+                    return self.codegen_kani_intrinsic(
+                        intrinsic,
+                        instance,
+                        fargs,
+                        *destination,
+                        *target,
+                        Some(span),
+                    );
+                }
+
+
+                todo!()
+            }
             _ => todo!(),
         }
     }
