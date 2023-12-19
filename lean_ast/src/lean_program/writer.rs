@@ -94,10 +94,12 @@ impl Function {
         write!(writer, "Id.run do")?;
         writeln!(writer)?;
         writer.indent()?;
+        writer.increase_indent();
         for stmt in self.body.iter().clone(){
             stmt.write_to(writer)?;
         }
         writeln!(writer)?;
+        writer.increase_indent();
         Ok(())
     }
 }
@@ -151,12 +153,18 @@ impl Stmt {
                 }
             }
             Stmt::IfThenElse {cond, then_branch, else_branch} => {
+                writer.indent()?;
                 write!(writer, "if ")?;
                 cond.write_to(writer)?;
                 writeln!(writer, " then")?;
+                writer.increase_indent();
                 then_branch.write_to(writer)?;
+                writer.decrease_indent();
+                writer.indent()?;
                 writeln!(writer, "else")?;
+                writer.increase_indent();
                 else_branch.write_to(writer)?;
+                writer.decrease_indent();
             }
             Stmt::Return {expr} => {
                 writer.indent()?;
@@ -426,17 +434,18 @@ mod tests {
         program.write_to(&mut v).unwrap();
         let program_text = String::from_utf8(v).unwrap().to_string();
 
+        // todo: issue with indentation
         let expected = String::from(
             "\
 -- Functions definition:
 def main : Int := Id.run do
-x := 1
-y := 2
-if x = 1 then
-y := 5
-else
-y := 10
-return y
+  x := 1
+  y := 2
+  if x = 1 then
+    y := 5
+  else
+    y := 10
+  return y
 ",
         );
         assert_eq!(program_text, expected);
