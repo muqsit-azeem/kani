@@ -133,9 +133,9 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     }
 
     //TODO: DONE! first pass
-    fn codegen_declare_variables(&self) -> Vec<Stmt> {
+    fn codegen_declare_variables(&self) -> Vec<Parameter> {
         let ldecls = self.mir.local_decls();
-        let decls: Vec<Stmt> = ldecls
+        let decls: Vec<Parameter> = ldecls
             .indices()
             .filter_map(|lc| {
                 let typ = self.instance.instantiate_mir_and_normalize_erasing_regions(
@@ -200,7 +200,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     }
 
     // TODO: Done first pass
-    fn codegen_statement(&self, stmt: &Statement<'tcx>) -> Option<Stmt> {
+    fn codegen_statement(&self, stmt: &Statement<'tcx>) -> Stmt {
         match &stmt.kind {
             StatementKind::Assign(box (place, rvalue)) => {
                 debug!(?place, ?rvalue, "codegen_statement");
@@ -282,7 +282,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             BinOp::Mul => Expr::BinaryOp { op: BinaryOp::Mul, left, right },
             BinOp::Div => Expr::BinaryOp { op: BinaryOp::Div, left, right },
 
-            BinOp::Neq => Expr::BinaryOp { op: BinaryOp::Neq, left, right },
+            BinOp::Ne => Expr::BinaryOp { op: BinaryOp::Neq, left, right },
 
             _ => todo!(),
         };
@@ -298,7 +298,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             TerminatorKind::Call { func, args, destination, target, .. } => {
                 self.codegen_funcall(func, args, destination, target, term.source_info.span)
             }
-            TerminatorKind::Return => Stmt::Return,
+            // todo: handle terminator return
+            // TerminatorKind::Return => Stmt::Return,
             _ => todo!(),
         }
     }
@@ -316,26 +317,26 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         let funct = self.operand_ty(func);
         // TODO: Only Kani intrinsics are handled currently
         match &funct.kind() {
-            ty::FnDef(defid, substs) => {
-                let instance = Instance::expect_resolve(
-                    self.tcx(),
-                    ty::ParamEnv::reveal_all(),
-                    *defid,
-                    substs,
-                );
-
-                if let Some(intrinsic) = get_kani_intrinsic(self.tcx(), instance) {
-                    return self.codegen_kani_intrinsic(
-                        intrinsic,
-                        instance,
-                        fargs,
-                        *destination,
-                        *target,
-                        Some(span),
-                    );
-                }
-                todo!()
-            }
+            // ty::FnDef(defid, substs) => {
+            //     let instance = Instance::expect_resolve(
+            //         self.tcx(),
+            //         ty::ParamEnv::reveal_all(),
+            //         *defid,
+            //         substs,
+            //     );
+            //
+            //     if let Some(intrinsic) = get_kani_intrinsic(self.tcx(), instance) {
+            //         return self.codegen_kani_intrinsic(
+            //             intrinsic,
+            //             instance,
+            //             fargs,
+            //             *destination,
+            //             *target,
+            //             Some(span),
+            //         );
+            //     }
+            //     todo!()
+            // }
             _ => todo!(),
         }
     }
@@ -411,8 +412,11 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         debug!(kind=?ty.kind(), "codegen_scalar");
         match (s, ty.kind()) {
             (Scalar::Int(_), ty::Bool) => Expr::Literal(Literal::Bool(s.to_bool().unwrap())),
-            (Scalar::Int(_), ty::Int(_)) => Expr::Literal(Literal::Int(s.to_int().unwrap())),
-            (Scalar::Int(_), ty::Uint(_)) => Expr::Literal(Literal::Nat(s.to_int().unwrap())),
+            // TODO: CHANGE TO BV
+            // TODO: get target width
+            // (Scalar::Int(_), ty::Int(_)) => Expr::Literal(Literal::Int(s.to_int().unwrap())),
+            // // TODO: get target width
+            // (Scalar::Int(_), ty::Uint(_)) => Expr::Literal(Literal::Nat(s.to_int().unwrap())),
             _ => todo!(),
         }
     }

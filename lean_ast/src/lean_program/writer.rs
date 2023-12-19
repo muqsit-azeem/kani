@@ -57,7 +57,7 @@ impl<'a, T: Write> Write for Writer<'a, T> {
 
 
 impl LeanProgram {
-    pub fn write_to<T: Write>(&self, writer: &mut Writer<T>) -> std::io::Result<()> {
+    pub fn write_to<T: Write>(&self, writer: &mut T) -> std::io::Result<()> {
         let mut writer = Writer::new(writer);
         if !self.functions.is_empty() {
             writeln!(writer, "-- Functions definition:")?;
