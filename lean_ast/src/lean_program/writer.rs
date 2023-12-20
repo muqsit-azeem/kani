@@ -194,8 +194,9 @@ impl Expr {
             }
             Expr::UnaryOp {op,operand} => {
                 op.write_to(writer)?;
-                write!(writer, "")?;
+                write!(writer, "(")?;
                 operand.write_to(writer)?;
+                write!(writer, ")")?;
             }
             Expr::BinaryOp {op,left, right} => {
                 left.write_to(writer)?;
@@ -212,6 +213,12 @@ impl Expr {
                     }
                     a.write_to(writer)?;
                 }
+            }
+            Expr::ExceptOk => {
+                writeln!(writer, "Except.ok")?;
+            }
+            Expr::ExceptError => {
+                writeln!(writer, "Except.error")?;
             }
 
             // Every `statement` is an `expression`  --
@@ -306,7 +313,7 @@ impl UnaryOp {
     fn write_to<T: Write> (&self, writer: &mut Writer<T>) -> std::io:: Result<()> {
         match self {
             // Logical negation
-            UnaryOp::Not => write!(writer, "~"),
+            UnaryOp::Not => write!(writer, "!"),
 
             // Arithmetic negation
             UnaryOp::Neg => write!(writer, "-"),
@@ -403,6 +410,17 @@ mod tests {
                                 value: Expr::Literal(Literal::Int(10.into())),
                             })),
                         },
+                        Stmt::IfThenElse {
+                            cond: Expr::UnaryOp {op: UnaryOp::Not, operand: Box::from(Expr::BinaryOp {
+                                op: BinaryOp::Eq,
+                                left: Box::new(Expr::Variable { name: "y".to_string() }),
+                                right: Box::new(Expr::Literal(Literal::Int(5.into()))),
+                            })
+                            },
+                            then_branch: Box::new(Stmt::Return {expr: Expr::ExceptError},
+                            ),
+                            else_branch: None,
+                        },
                         Stmt::Return {expr: Expr::Variable { name: "y".to_string() }},
                         // Stmt::Assert {
                         //     condition: Expr::BinaryOp {
@@ -446,6 +464,8 @@ def main : Int := Id.run do
     y := 5
   else
     y := 10
+  if !(y = 5) then
+    return Except.error
   return y
 ",
         );

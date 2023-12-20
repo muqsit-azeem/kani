@@ -15,8 +15,10 @@ use std::str::FromStr;
 use strum::VariantNames;
 use strum_macros::{EnumString, EnumVariantNames};
 use tracing::debug;
+use lean_ast::lean_program::Expr::{ExceptError, UnaryOp};
 use lean_ast::lean_program::Literal::Int;
-use lean_ast::lean_program::Stmt::Thm;
+use lean_ast::lean_program::Stmt::{Return, Thm};
+use lean_ast::lean_program::UnaryOp::Neg;
 
 // TODO: move this enum up to `kani_middle`
 #[derive(Debug, Clone, PartialEq, Eq, EnumString, EnumVariantNames)]
@@ -83,9 +85,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         //TODO: Fix this relate to result
         // TODO: handle message
         // TODO: handle location
-        //let stmt = Stmt::IfThenElse { cond: expr, then_branch: expr1  , else_branch: expr2 };
-        //todo:TEMP hardcoding
-        let stmt= Stmt::Assignment {variable:"x".to_string(), value:Expr::Literal(Int(2.into()))};
+        let stmt = Stmt::IfThenElse { cond: UnaryOp {op: UnaryOp::Not, operand: Box::new(expr) } , then_branch: Box::new(Return {expr: ExceptError}), else_branch: None };
         stmt
     }
 
@@ -93,12 +93,16 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     pub fn codegen_kani_assume(
         &self,
         _instance: Instance<'tcx>,
-        mut _fargs: Vec<Expr>,
+        mut fargs: Vec<Expr>,
         _assign_to: Place<'tcx>,
         _target: Option<BasicBlock>,
         _span: Option<Span>,
     ) -> Stmt {
-        todo!()
+        //TODO: Adapt this for assume either using Result or Except
+        assert_eq!(fargs.len(), 1); // 2);
+        let expr = fargs.remove(0);
+        let stmt = Stmt::IfThenElse { cond: expr, then_branch: expr1  , else_branch: expr2 };
+        stmt
     }
 }
 

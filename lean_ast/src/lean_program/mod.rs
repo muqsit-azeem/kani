@@ -142,9 +142,6 @@ pub enum Expr {
     /// Binary operation
     BinaryOp { op: BinaryOp, left: Box<Expr>, right: Box<Expr> },
 
-    /// Statement
-    /// TODO: Also think about mutable variables in lean -- using Monads
-
     /// Function call
     /// In Lean, functions are first class citizens meaning that
     /// they are used and manipulated just like any other data, e.g. Ints, Strings.
@@ -153,6 +150,9 @@ pub enum Expr {
     /// Functions are pure -- `without` side effects -- map input to output deterministically
     FunctionCall { name: String, arguments: Vec<Expr> },
 
+    ExceptOk,
+
+    ExceptError,
 }
 
 /// Lean Statement
