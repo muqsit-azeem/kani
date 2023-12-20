@@ -160,11 +160,13 @@ impl Stmt {
                 writer.increase_indent();
                 then_branch.write_to(writer)?;
                 writer.decrease_indent();
-                writer.indent()?;
-                writeln!(writer, "else")?;
-                writer.increase_indent();
-                else_branch.write_to(writer)?;
-                writer.decrease_indent();
+                if let Some(else_branch) = else_branch {
+                    writer.indent()?;
+                    writeln!(writer, "else")?;
+                    writer.increase_indent();
+                    else_branch.write_to(writer)?;
+                    writer.decrease_indent();
+                }
             }
             Stmt::Return {expr} => {
                 writer.indent()?;
@@ -395,12 +397,11 @@ mod tests {
                                 variable: "y".to_string(),
                                 value: Expr::Literal(Literal::Int(5.into())),
                             }),
-                            //todo: for now assuming that `else` will always be there
-                            // which is not true -- make `else` optional
-                            else_branch: Box::new(Stmt::Assignment {
+                            // else_branch: None,
+                            else_branch: Some(Box::new(Stmt::Assignment {
                                 variable: "y".to_string(),
                                 value: Expr::Literal(Literal::Int(10.into())),
-                            }),
+                            })),
                         },
                         Stmt::Return {expr: Expr::Variable { name: "y".to_string() }},
                         // Stmt::Assert {

@@ -178,7 +178,7 @@ pub enum Stmt {
 
     //todo: for now assuming that `else` will always be there
     // which is not true -- make `else` optional
-    IfThenElse {cond: Expr, then_branch: Box<Stmt>, else_branch: Box<Stmt>},
+    IfThenElse {cond: Expr, then_branch: Box<Stmt>, else_branch: Option<Box<Stmt>>},
 
     Return { expr: Expr},
 
