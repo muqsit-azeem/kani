@@ -6,6 +6,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use crate::args::common::UnstableFeature;
 use crate::session::{lib_folder, KaniSession};
 
 impl KaniSession {
@@ -19,6 +20,12 @@ impl KaniSession {
     ) -> Result<()> {
         let mut kani_args = self.kani_compiler_flags();
         kani_args.push(format!("--reachability={}", self.reachability_mode()));
+
+        if self.args.common_args.unstable_features.contains(UnstableFeature::Lean) {
+            kani_args.push("--backend=lean".into());
+        } else {
+            kani_args.push("--backend=c_prover".into());
+        }
 
         let mut rustc_args = self.kani_rustc_flags();
         rustc_args.push(file.into());
@@ -62,6 +69,14 @@ impl KaniSession {
     /// Create a compiler option that represents the reachability mod.
     pub fn reachability_arg(&self) -> String {
         to_rustc_arg(vec![format!("--reachability={}", self.reachability_mode())])
+    }
+
+    pub fn backend_arg(&self) -> Option<String> {
+        if self.args.common_args.unstable_features.contains(UnstableFeature::Lean) {
+            Some(to_rustc_arg(vec!["--backend=boogie".into()]))
+        } else {
+            None
+        }
     }
 
     /// These arguments are arguments passed to kani-compiler that are `kani` compiler specific.

@@ -7,7 +7,7 @@
 
 use super::lean_ctx::FunctionCtx;
 
-use lean_ast::lean_program::{Expr, Stmt, Theorem, Parameter, Hypothesis};
+use lean_ast::lean_program::{ Expr, Stmt, Theorem, Parameter, Hypothesis};
 use rustc_middle::mir::{BasicBlock, Place};
 use rustc_middle::ty::{Instance, TyCtxt};
 use rustc_span::Span;
@@ -18,7 +18,8 @@ use tracing::debug;
 use lean_ast::lean_program::Expr::{ExceptError, UnaryOp};
 use lean_ast::lean_program::Literal::Int;
 use lean_ast::lean_program::Stmt::{Return, Thm};
-use lean_ast::lean_program::UnaryOp::Neg;
+use lean_ast::lean_program::UnaryOp::{Neg,Not};
+
 
 // TODO: move this enum up to `kani_middle`
 #[derive(Debug, Clone, PartialEq, Eq, EnumString, EnumVariantNames)]
@@ -83,9 +84,9 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         assert_eq!(fargs.len(), 1); // 2);
         let expr = fargs.remove(0);
         //TODO: Fix this relate to result
-        // TODO: handle message
+        // trace!(typ=?ty, "codegen_assert");
         // TODO: handle location
-        let stmt = Stmt::IfThenElse { cond: UnaryOp {op: UnaryOp::Not, operand: Box::new(expr) } , then_branch: Box::new(Return {expr: ExceptError}), else_branch: None };
+        let stmt = Stmt::IfThenElse { cond: UnaryOp {op: Not, operand: Box::new(expr) } , then_branch: Box::new(Return {expr: ExceptError}), else_branch: None };
         stmt
     }
 
@@ -101,7 +102,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         //TODO: Adapt this for assume either using Result or Except
         assert_eq!(fargs.len(), 1); // 2);
         let expr = fargs.remove(0);
-        let stmt = Stmt::IfThenElse { cond: expr, then_branch: expr1  , else_branch: expr2 };
+        let stmt = Stmt::IfThenElse { cond: UnaryOp {op: Not, operand: Box::new(expr) } , then_branch: Box::new(Return {expr: ExceptError}), else_branch: None };
         stmt
     }
 }

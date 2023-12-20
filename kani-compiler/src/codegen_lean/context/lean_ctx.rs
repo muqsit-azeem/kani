@@ -234,7 +234,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     fn codegen_rvalue(&self, rvalue: &Rvalue<'tcx>) -> (Option<Stmt>, Expr) {
         debug!(rvalue=?rvalue, "codegen_rvalue");
         match rvalue {
-            // Rvalue::Use(operand) => (None, self.codegen_operand(operand)),
+            Rvalue::Use(operand) => (None, self.codegen_operand(operand)),
             Rvalue::UnaryOp(op, operand) => self.codegen_unary_op(op, operand),
             Rvalue::BinaryOp(binop, box (lhs, rhs)) => self.codegen_binary_op(binop, lhs, rhs),
             _ => todo!(),
@@ -299,7 +299,11 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                 self.codegen_funcall(func, args, destination, target, term.source_info.span)
             }
             // todo: handle terminator return
-            // TerminatorKind::Return => Stmt::Return,
+            // TerminatorKind::Return {..} => {Stmt::Assignment {
+            //     variable: "x".to_string(),
+            //     value: Expr::Literal(Literal::Int(1.into())),
+            // }},
+            TerminatorKind::Return {..} => {Stmt::Return {expr: Expr::ExceptOk}},
             _ => todo!(),
         }
     }
@@ -414,12 +418,59 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         debug!(kind=?ty.kind(), "codegen_scalar");
         match (s, ty.kind()) {
             (Scalar::Int(_), ty::Bool) => Expr::Literal(Literal::Bool(s.to_bool().unwrap())),
-            // TODO: CHANGE TO BV
-            // TODO: get target width
-            // (Scalar::Int(_), ty::Int(_)) => Expr::Literal(Literal::Int(s.to_int().unwrap())),
+            (Scalar::Int(_), ty::Int(it)) => match it {
+                IntTy::I8 => Expr::Literal(Literal::Int(s.to_i8().unwrap().into())),
+                IntTy::I16 => Expr::Literal(Literal::Int(s.to_i16().unwrap().into())),
+                IntTy::I32 => Expr::Literal(Literal::Int(s.to_i32().unwrap().into())),
+                IntTy::I64 => Expr::Literal(Literal::Int(s.to_i64().unwrap().into())),
+                IntTy::I128 => Expr::Literal(Literal::Int(s.to_i128().unwrap().into())),
+                IntTy::Isize => Expr::Literal(Literal::Int(s.to_target_isize(self).unwrap().into())),
+            },
+            (Scalar::Int(_), ty::Uint(it)) => match it {
+                UintTy::U8 => Expr::Literal(Literal::Nat(s.to_u8().unwrap().into())),
+                UintTy::U16 => Expr::Literal(Literal::Nat(s.to_u16().unwrap().into())),
+                UintTy::U32 => Expr::Literal(Literal::Nat(s.to_u32().unwrap().into())),
+                UintTy::U64 => Expr::Literal(Literal::Nat(s.to_u64().unwrap().into())),
+                UintTy::U128 => Expr::Literal(Literal::Nat(s.to_u128().unwrap().into())),
+                UintTy::Usize => Expr::Literal(Literal::Nat(s.to_target_usize(self).unwrap().into())),
+            },
+
+            // (Scalar::Int(_), ty::Bool) => Expr::Literal(Literal::Bool(s.to_bool().unwrap())),
+            // // TODO: CHANGE TO BV
             // // TODO: get target width
-            // (Scalar::Int(_), ty::Uint(_)) => Expr::Literal(Literal::Nat(s.to_int().unwrap())),
+            // //(Scalar::Int(_), ty::Int(_)) => Expr::Literal(Literal::Int(s.to_int().into())),
+            // // // TODO: get target width
+            // //(Scalar::Int(_), ty::Uint(_)) => Expr::Literal(Literal::Nat(s.to_int().unwrap().into())),
+            // //_ => todo!(),
+            //
+            // (Scalar::Int(_), ty::Int(it)) => match it {
+            //     // IntTy::I8 => Expr::Literal(Literal::Int(s.to_i8().unwrap().into())),
+            //     // IntTy::I16 => Expr::Literal(Literal::Int(s.to_i16().unwrap().into())),
+            //     // IntTy::I32 => Expr::Literal(Literal::Int(s.to_i32().unwrap().into())),
+            //     // IntTy::I64 => Expr::Literal(Literal::Int(s.to_i64().unwrap().into())),
+            //     // IntTy::I128 => Expr::Literal(Literal::Int(s.to_i128().unwrap().into())),
+            //     IntTy::Isize => {
+            //         // TODO: get target width
+            //         Expr::Literal(Literal::Int(s.to_target_isize(self).unwrap().into()))
+            //     }
+            //     _ => todo!()
+            // },
+            // (Scalar::Int(_), ty::Uint(it)) => match it {
+            //     // UintTy::U8 => Expr::Literal(Literal::bv(8, s.to_u8().unwrap().into())),
+            //     // UintTy::U16 => Expr::Literal(Literal::bv(16, s.to_u16().unwrap().into())),
+            //     // UintTy::U32 => Expr::Literal(Literal::bv(32, s.to_u32().unwrap().into())),
+            //     // UintTy::U64 => Expr::Literal(Literal::bv(64, s.to_u64().unwrap().into())),
+            //     // UintTy::U128 => Expr::Literal(Literal::bv(128, s.to_u128().unwrap().into())),
+            //     UintTy::Usize => {
+            //         // TODO: get target width
+            //         Expr::Literal(Literal::Nat(s.to_target_usize(self).unwrap().into()))
+            //     }
+            //     _ => todo!()
+            // },
             _ => todo!(),
+
+
+
         }
     }
 

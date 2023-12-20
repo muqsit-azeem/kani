@@ -221,19 +221,14 @@ impl Expr {
                 writeln!(writer, "Except.error")?;
             }
 
-            // Every `statement` is an `expression`  --
-            // Return/let statement or expression?
-            // IfThenElse
-            // Expr::IfThenElse {Cond, Expr, Expr}
+            //todo: Expr::MatchExpr {ExprToMatch, Cases}
+            // Cases could be Vec<Expr, Result>
             // def fact : Nat -> Nat
             //   | 0   => 1
             //   | succ n => succ n * fact n
-            // Expr::MatchExpr {ExprToMatch, Cases}
-            // Cases could be Vec<Expr, Result>
         }
         Ok(())
     }
-
 }
 
 
