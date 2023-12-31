@@ -82,7 +82,8 @@ impl Function {
             param.typ.write_to(writer)?;
             write!(writer, ") ")?;
         }
-        write!(writer, " : ")?;
+        //todo: fix hardcoding the return type depending on the text in assertions
+        write!(writer, " : Except String Unit")?;
         if let Some (return_typ) = &self.return_type{
             return_typ.write_to(writer)?;
         } else {
@@ -127,7 +128,7 @@ impl Stmt {
             //TODO: if we are using state Monad for assignments, we should definitely take care of importing IO...
             Stmt::Assignment {variable, value } => {
                 writer.indent()?;
-                write!(writer, "{} := ", variable)?;
+                write!(writer, "let mut {} := ", variable)?;
                 value.write_to(writer)?;
                 writeln!(writer,"")?;
             }
@@ -215,10 +216,10 @@ impl Expr {
                 }
             }
             Expr::ExceptOk => {
-                writeln!(writer, "Except.ok")?;
+                writeln!(writer, "Except.ok ()")?;
             }
             Expr::ExceptError => {
-                writeln!(writer, "Except.error")?;
+                writeln!(writer, "Except.error \"assertion did not pass\"")?;
             }
 
             //todo: Expr::MatchExpr {ExprToMatch, Cases}
@@ -241,6 +242,7 @@ impl Type {
             Type::Nat => write!(writer, "Nat")?,
             Type::ParameterType {name} => write!(writer, "{}", name)?,
 
+
             // Type::Function {key, value} => {
             //     // can be a variable or a function
             //     write!(writer, " (")?;
@@ -261,8 +263,6 @@ impl Type {
                 write!(writer, " -> ")?;
                 value.write_to(writer)?;
             },
-
-
             // (l: (Nat * Nat))
             Type::Product {typ1, typ2} => {
                 typ1.write_to(writer)?;
@@ -358,8 +358,6 @@ impl BinaryOp {
         }
     }
 }
-
-
 
 
 

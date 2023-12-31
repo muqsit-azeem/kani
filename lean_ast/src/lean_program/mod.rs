@@ -14,7 +14,7 @@ pub enum Type {
     /// Boolean
     Bool, //  true or false
 
-    /// Naturals (TODO: Do we need this?)  -- two possibilities -- 1) BV for lean (being developed within AWS) 2)
+    /// Naturals TODO: BV for lean?
     Nat,
     // unsinged -> nats
     // signed -> integers; i8 in rust is bv
@@ -33,6 +33,7 @@ pub enum Type {
 
     Product {typ1: Box<Type>, typ2: Box<Type>}
     // InputFunction {key: Box<Type>, value: Box<Type>},
+
 
     // (inductive:)
     // Struct would be Struct

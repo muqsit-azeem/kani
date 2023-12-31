@@ -290,7 +290,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     }
 
 
-    // TODO: Done first pass
+    // TODO: fix assert within ifthen else fail here
     fn codegen_terminator(&self, term: &Terminator<'tcx>) -> Stmt {
         let _trace_span = debug_span!("CodegenTerminator", statement = ?term.kind).entered();
         debug!("handling terminator {:?}", term);
@@ -303,6 +303,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             //     variable: "x".to_string(),
             //     value: Expr::Literal(Literal::Int(1.into())),
             // }},
+            //todo: if return something include this case as well
             TerminatorKind::Return {..} => {Stmt::Return {expr: Expr::ExceptOk}},
             _ => todo!(),
         }
