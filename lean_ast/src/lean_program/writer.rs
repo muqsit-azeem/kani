@@ -128,7 +128,9 @@ impl Stmt {
             //TODO: if we are using state Monad for assignments, we should definitely take care of importing IO...
             Stmt::Assignment {variable, value } => {
                 writer.indent()?;
-                write!(writer, "let mut {} := ", variable)?;
+                write!(writer, "let {} := ", variable)?;
+                //todo: What are assignments when we update
+                // write!(writer, "let mut {} := ", variable)?;
                 value.write_to(writer)?;
                 writeln!(writer,"")?;
             }
@@ -358,8 +360,6 @@ impl BinaryOp {
         }
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {

@@ -164,6 +164,12 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             ty::Bool => Type::Bool,
             ty::Int(ity) => Type::Int,
             ty::Uint(uty) => Type::Nat,
+            ty::Tuple(types) => {
+                //TODO: Only handles first element of tuple for now (e.g.
+                // ignores overflow field of an addition and only takes the
+                // result field)
+                self.codegen_type(types.iter().next().unwrap())
+            }
             _ => todo!(),
         }
     }
@@ -228,6 +234,78 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     }
 
 
+    // /// Generates Lean for MIR [TerminatorKind::SwitchInt].
+    // /// Operand evaluates to an integer;
+    // /// executes depending on its value to one of the targets, and otherwise fallback to `targets.otherwise()`.
+    // /// The otherwise value is stores as the last value of targets.
+    // fn codegen_switch_int(
+    //     &mut self,
+    //     discr: &Operand,
+    //     targets: &SwitchTargets,
+    //     loc: Location,
+    // ) -> Stmt {
+    //     let v = self.codegen_operand_stable(discr);
+    //     let switch_ty = v.typ().clone();
+    //
+    //     // Switches with empty branches should've been eliminated already.
+    //     assert!(targets.len() > 1);
+    //     if targets.len() == 2 {
+    //         // Translate to a guarded goto
+    //         let (case, first_target) = targets.branches().next().unwrap();
+    //         Stmt::IfThenElse {}
+    //
+    //
+    //         Stmt::block(
+    //             vec![
+    //                 v.eq(Expr::int_constant(case, switch_ty)).if_then_else(
+    //                     Stmt::goto(bb_label(first_target), loc),
+    //                     None,
+    //                     loc,
+    //                 ),
+    //                 Stmt::goto(bb_label(targets.otherwise()), loc),
+    //             ],
+    //             loc,
+    //         )
+    //     } else {
+    //         let cases = targets
+    //             .branches()
+    //             .map(|(c, bb)| {
+    //                 Expr::int_constant(c, switch_ty.clone())
+    //                     .switch_case(Stmt::goto(bb_label(bb), loc))
+    //             })
+    //             .collect();
+    //         let default = Stmt::goto(bb_label(targets.otherwise()), loc);
+    //         v.switch(cases, Some(default), loc)
+    //     }
+    // }
+
+    // fn codegen_switch_int(&self, discr: &Operand<'tcx>, targets: &SwitchTargets) -> Stmt {
+    //     debug!(discr=?discr, targets=?targets, "codegen_switch_int");
+    //     let op = self.codegen_operand(discr);
+    //     if targets.all_targets().len() == 2 {
+    //         let then = targets.iter().next().unwrap();
+    //         let right = match self.operand_ty(discr).kind() {
+    //             ty::Bool => Literal::Bool(then.0 != 0),
+    //             ty::Uint(_) => Literal::Nat(then.0.into()),
+    //             _ => unreachable!(),
+    //         };
+    //         // model as an if
+    //         return Stmt::IfThenElse {
+    //             cond: Expr::BinaryOp {
+    //                 op: BinaryOp::Eq,
+    //                 left: Box::new(op),
+    //                 right: Box::new(Expr::Literal(right)),
+    //             },
+    //             then_branch: Box::new(Stmt::Goto { label: format!("{:?}", then.1) }),
+    //             else_branch: Some(Box::new(Stmt::Goto { label: format!("{:?}", targets.otherwise()),
+    //         })),
+    //         };
+    //     }
+    //     todo!()
+    // }
+
+
+
     // TODO: Done first pass
     /// Codegen an rvalue. Returns the expression for the rvalue and an optional
     /// statement for any possible checks instrumented for the rvalue expression
@@ -237,6 +315,10 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             Rvalue::Use(operand) => (None, self.codegen_operand(operand)),
             Rvalue::UnaryOp(op, operand) => self.codegen_unary_op(op, operand),
             Rvalue::BinaryOp(binop, box (lhs, rhs)) => self.codegen_binary_op(binop, lhs, rhs),
+            Rvalue::CheckedBinaryOp(binop, box (ref e1, ref e2)) => {
+                // TODO: handle overflow check
+                self.codegen_binary_op(binop, e1, e2)
+            }
             _ => todo!(),
         }
     }
@@ -298,6 +380,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             TerminatorKind::Call { func, args, destination, target, .. } => {
                 self.codegen_funcall(func, args, destination, target, term.source_info.span)
             }
+            // TerminatorKind::SwitchInt { discr, targets } => self.codegen_switch_int(discr, targets),
             // todo: handle terminator return
             // TerminatorKind::Return {..} => {Stmt::Assignment {
             //     variable: "x".to_string(),
@@ -305,6 +388,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             // }},
             //todo: if return something include this case as well
             TerminatorKind::Return {..} => {Stmt::Return {expr: Expr::ExceptOk}},
+            TerminatorKind::SwitchInt { .. } => todo!(),
+            TerminatorKind::Assert { .. } => todo!(), // TODO: ignore injection assertions for now
             _ => todo!(),
         }
     }

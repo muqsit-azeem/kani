@@ -175,7 +175,7 @@ impl LeanCodegenBackend {
         if !tcx.sess.opts.unstable_opts.no_codegen && tcx.sess.opts.output_types.should_codegen() {
             let mut pb = lean_file.to_path_buf();
             pb.set_extension("lean");
-            debug!("Writing Lean file to {}", pb.display());
+            println!("Writing Lean file to {}", pb.display());
             let file = File::create(&pb).unwrap();
             let mut writer = BufWriter::new(file);
             lcx.write(&mut writer).unwrap();

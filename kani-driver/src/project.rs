@@ -319,6 +319,7 @@ impl<'a> StandaloneProjectBuilder<'a> {
         // Build and link the artifacts.
         debug!(krate=?self.crate_name, input=?self.input, ?rlib_path, "build compile");
         self.session.compile_single_rust_file(&self.input, &self.crate_name, &self.outdir)?;
+        std::process::exit(1);
 
         let metadata = if let Ok(goto_model) = Artifact::try_from(&self.metadata, SymTabGoto) {
             metadata_with_function(
