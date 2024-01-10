@@ -547,6 +547,7 @@ impl<'tcx> GotocCtx<'tcx> {
                     }
                     // Handle a virtual function call via a vtable lookup
                     InstanceKind::Virtual { idx } => {
+                        let mut fargs = self.codegen_funcall_args(&args, false);
                         let self_ty = self.operand_ty_stable(&args[0]);
                         self.codegen_virtual_funcall(self_ty, idx, destination, &mut fargs, loc)
                     }
@@ -668,6 +669,7 @@ impl<'tcx> GotocCtx<'tcx> {
 
         // Virtual function call and corresponding nonnull assertion.
         let call = fn_ptr.dereference().call(fargs.to_vec());
+
         let call_stmt = self.codegen_expr_to_place_stable(place, call).with_location(loc);
         let call_stmt = if self.vtable_ctx.emit_vtable_restrictions {
             self.virtual_call_with_restricted_fn_ptr(trait_fat_ptr.typ().clone(), idx, call_stmt)

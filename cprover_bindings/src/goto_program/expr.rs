@@ -664,6 +664,7 @@ impl Expr {
                     true
                 } else {
                     tracing::error!(param=?p.typ(), arg=?a.typ(), "Argument doesn't check");
+                    assert!(false, "Argument doesn't check");
                     false
                 }
             })
@@ -671,11 +672,19 @@ impl Expr {
 
         if function.typ().is_code() {
             let parameters = function.typ().parameters().unwrap();
+            println!("argXXXX {:?}", arguments);
+            println!("paramXXXX {:?}", parameters);
+            if(arguments.len() != parameters.len()){
+                println!("arg len not same")
+            }
+            assert!(arguments.len() == parameters.len(), "arg len did not match");
             arguments.len() == parameters.len() && typecheck_named_args(parameters, arguments)
         } else if function.typ().is_variadic_code() {
             let parameters = function.typ().parameters().unwrap();
+            // assert!(arguments.len() >= parameters.len(), "arg len smaller");
             arguments.len() >= parameters.len() && typecheck_named_args(parameters, arguments)
         } else {
+            // assert!(false, "function doesn't check");
             false
         }
     }
@@ -686,6 +695,9 @@ impl Expr {
     /// If you are using this in statement context (e.g. ignoring or assigning the value), use
     /// the `Stmt::function_call` constructor.
     pub fn call(self, arguments: Vec<Expr>) -> Self {
+        // Before the assertion
+        // println!("FunctionMMM: {:?}", self);
+        // println!("ArgumentsMMM: {:?}", arguments);
         assert!(
             Expr::typecheck_call(&self, &arguments),
             "Function call does not type check:\nfunc: {self:?}\nargs: {arguments:?}"
