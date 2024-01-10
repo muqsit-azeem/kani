@@ -672,12 +672,12 @@ impl Expr {
 
         if function.typ().is_code() {
             let parameters = function.typ().parameters().unwrap();
-            println!("argXXXX {:?}", arguments);
-            println!("paramXXXX {:?}", parameters);
-            if(arguments.len() != parameters.len()){
-                println!("arg len not same")
-            }
-            assert!(arguments.len() == parameters.len(), "arg len did not match");
+            // println!("argXXXX {:?}", arguments);
+            // println!("paramXXXX {:?}", parameters);
+            // if(arguments.len() != parameters.len()){
+            //     println!("arg len not same")
+            // }
+            // assert!(arguments.len() == parameters.len(), "arg len did not match");
             arguments.len() == parameters.len() && typecheck_named_args(parameters, arguments)
         } else if function.typ().is_variadic_code() {
             let parameters = function.typ().parameters().unwrap();
