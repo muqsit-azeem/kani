@@ -193,7 +193,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         let expr = self
             .operand_to_expr(self_ref)
             .expect("expecting operand to be a ref to an existing expression");
-        let len = Expr::Field { base: Box::new(expr.clone()), field: String::from("size") };
+        let len = Expr::Field { base: Box::new(expr.clone()), field: String::from(".size") };
 
         let place = self.codegen_place(&assign_to);
 
@@ -219,7 +219,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         let expr = self
             .operand_to_expr(self_ref)
             .expect("expecting operand to be a ref to an existing expression");
-        let map = Expr::Field { base: Box::new(expr.clone()), field: String::from("data") };
+        // let map = Expr::Field { base: Box::new(expr.clone()), field: String::from("data") };
+        let map = Expr::Field { base: Box::new(expr.clone()), field: String::from(" get ") };
 
         let index = self.codegen_operand(&args[1]);
         let index_expr = Expr::Select { base: Box::new(map), key: Box::new(index) };
@@ -246,7 +247,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         let expr = self
             .operand_to_expr(mut_self_ref)
             .expect("expecting operand to be a ref to an existing expression");
-        let map = Expr::Field { base: Box::new(expr.clone()), field: String::from("data") };
+        // let map = Expr::Field { base: Box::new(expr.clone()), field: String::from("data") };
+        let map = Expr::Field { base: Box::new(expr.clone()), field: String::from(".set ") };
 
         let index = self.codegen_operand(&args[1]);
 

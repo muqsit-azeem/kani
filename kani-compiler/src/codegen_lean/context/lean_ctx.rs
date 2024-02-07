@@ -21,6 +21,8 @@ use rustc_middle::ty::{self, Instance, InstanceDef, IntTy, List, Ty, TyCtxt, Uin
 use rustc_span::Span;
 use rustc_target::abi::{HasDataLayout, TargetDataLayout};
 use std::collections::hash_map::Entry;
+use std::collections::HashSet;
+// use std::intrinsics::mir::BasicBlock;
 use itertools::Itertools;
 // use serde::de::Unexpected::Option;
 use strum::IntoEnumIterator;
@@ -41,11 +43,13 @@ pub struct LeanCtx<'tcx> {
     program: LeanProgram,
 }
 
+
 impl<'tcx> LeanCtx<'tcx> {
     pub fn new(tcx: TyCtxt<'tcx>, queries: QueryDb) -> LeanCtx<'tcx> {
         let mut program = LeanProgram::new();
-        LeanCtx { tcx, queries, program }
+        LeanCtx { tcx, queries, program}
     }
+
 
 
     // Todo: Clarify this
@@ -102,14 +106,18 @@ pub(crate) struct FunctionCtx<'a, 'tcx> {
     /// ````
     /// In this case, the map will contain an entry that maps `b` to `x`
     pub(crate) ref_to_expr: FxHashMap<Place<'tcx>, Expr>,
+    visited_blocks: HashSet<BasicBlock>,
 }
 
 impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
+
     pub fn new(lcx: &'a LeanCtx<'tcx>, instance: Instance<'tcx>) -> FunctionCtx<'a, 'tcx> {
         // create names for all locals
         let mut local_names = FxHashMap::default();
         let mut name_occurrences: FxHashMap<String, usize> = FxHashMap::default();
         let mir = lcx.tcx.instance_mir(instance.def);
+        // Initialize visited_blocks as empty
+        let mut visited_blocks = HashSet::new();
         let ldecls = mir.local_decls();
         for local in ldecls.indices() {
             let debug_info = mir.var_debug_info.iter().find(|info| match info.value {
@@ -137,7 +145,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             };
             local_names.insert(local, name);
         }
-        Self { lcx, instance, mir, local_names, ref_to_expr: FxHashMap::default() }
+
+        Self { lcx, instance, mir, local_names, ref_to_expr: FxHashMap::default(), visited_blocks, }
     }
 
     //TODO: DONE! first pass
@@ -216,17 +225,35 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     }
 
     // TODO: Done first pass
+    // fn codegen_body(&mut self) -> Vec<Stmt> {
+    //     let statements: Vec<Stmt> =
+    //         reverse_postorder(self.mir).map(|(bb, bbd)| self.codegen_block(bb, bbd)).collect();
+    //     statements
+    //     //Stmt::Block { statements }
+    // }
+
+    // codegen_body without map
     fn codegen_body(&mut self) -> Vec<Stmt> {
-        let statements: Vec<Stmt> =
-            reverse_postorder(self.mir).map(|(bb, bbd)| self.codegen_block(bb, bbd)).collect();
+        let mut statements = Vec::new();
+        for (bb, bbd) in reverse_postorder(self.mir) {
+
+            if !self.visited_blocks.contains(&bb) {
+            //     for block in self.visited_blocks.iter() {
+            //         println!("{:?}", block);
+            //     }
+                println!("Generating code for block number: {:?}", bb); // Print the block number
+                statements.push(self.codegen_block(bb, bbd)); // Generate the statement and collect it
+            }
+        }
         statements
-        //Stmt::Block { statements }
     }
+
+
 
     // TODO: Done first pass
     fn codegen_block(&mut self, bb: BasicBlock, bbd: &BasicBlockData<'tcx>) -> Stmt {
         debug!(?bb, ?bbd, "codegen_block");
-        println!("{:?} {:?} {}", bb, bbd, "CODEGEN BLOCK");
+        // println!("{:?} {:?} {}", bb, bbd, "CODEGEN BLOCK");
         // the first statement should be labelled. if there is no statements, then the
         // terminator should be labelled.
         let statements = match bbd.statements.len() {
@@ -351,6 +378,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         let op = self.codegen_operand(discr);
         if targets.all_targets().len() == 2 {
             let then = targets.iter().next().unwrap();
+            self.visited_blocks.insert(then.1);
+
             let bbd_then = self.mir.basic_blocks[then.1].clone();
             let then_statements = match bbd_then.statements.len() {
                 0 => {
@@ -363,10 +392,12 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                         bbd_then.statements.iter().map(|stmt| self.codegen_statement(stmt)).collect();
                     let term = self.codegen_terminator(bbd_then.terminator());
                     then_statements.push(term);
+                    println!("Generating code for THEN block number: {:?}", then.1);
                     then_statements
                 }
             };
             let bbd_else = self.mir.basic_blocks[targets.otherwise()].clone();
+            self.visited_blocks.insert(targets.otherwise());
             let else_statements = match bbd_else.statements.len() {
                 0 => {
                     let term = bbd_else.terminator();
@@ -378,6 +409,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                         bbd_else.statements.iter().map(|stmt| self.codegen_statement(stmt)).collect();
                     let term = self.codegen_terminator(bbd_else.terminator());
                     else_statements.push(term);
+                    println!("Generating code for ELSE block number: {:?}", targets.otherwise());
                     else_statements
                 }
             };
@@ -741,9 +773,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                 if ty.is_primitive() {
                     return Some(self.codegen_operand(o));
                 }
-                println!("TTTTYYYYYPPPPEEEE{}", ty.to_string());
                 if ty.to_string() == "kani::array::Array<i32>" {
-                    println!("NAAAAAMMMEEE{}",self.local_name(o.place().unwrap().local).clone());
                     // match o {
                     //     Operand::Copy(place) | Operand::Move(place) => {
                     //         if let Some(operand_name) =  {

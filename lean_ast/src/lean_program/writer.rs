@@ -235,13 +235,17 @@ impl Expr {
             // }
             Expr::Field { base, field } => {
                 base.write_to(writer)?;
-                write!(writer, "TODOField.{field}")?;
+                // write!(writer, "TODOField {field}")?;
+                write!(writer, "{field}")?;
             }
             Expr::Select { base, key } => {
                 base.write_to(writer)?;
-                write!(writer, "TODOselectOpen")?;
+                // write!(writer, "TODOselectOpen")?;
+                //todo: only updates are for setting value of an array index handled now
+                // cover all the cases
+                // write!(writer, " set ")?;
                 key.write_to(writer)?;
-                write!(writer, "TODOselectClose")?;
+                // write!(writer, "TODOselectClose")?;
             }
             Expr::ExceptOk => {
                 writeln!(writer, "Except.ok ()")?;
