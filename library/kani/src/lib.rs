@@ -17,6 +17,8 @@
 // Required for rustc_diagnostic_item
 #![allow(internal_features)]
 
+
+
 pub mod arbitrary;
 #[cfg(feature = "concrete_playback")]
 mod concrete_playback;
@@ -26,7 +28,7 @@ pub mod tuple;
 pub mod vec;
 
 mod models;
-
+pub mod array;
 pub use arbitrary::Arbitrary;
 #[cfg(feature = "concrete_playback")]
 pub use concrete_playback::concrete_playback_run;

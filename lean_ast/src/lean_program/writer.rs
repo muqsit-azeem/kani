@@ -155,6 +155,22 @@ impl Stmt {
                     s.write_to(writer)?;
                 }
             }
+            Stmt::FunctionCall {name, arguments} => {
+                writer.indent()?;
+                write!(writer, "{} ", name)?;
+                for (i, a) in arguments.iter().enumerate() {
+                    if i>0 {
+                        write!(writer, " ")?;
+                    }
+                    a.write_to(writer)?;
+                }
+                writeln!(writer,"")?;
+            }
+
+
+            //todo: fix this -- remove pass
+            //Stmt::Skip => {writeln!(writer, "pass ")?;}
+            Stmt::Skip => { }
             Stmt::IfThenElse {cond, then_branch, else_branch} => {
                 writer.indent()?;
                 write!(writer, "if ")?;
@@ -208,14 +224,24 @@ impl Expr {
                 write!(writer, " ")?;
                 right.write_to(writer)?;
             }
-            Expr::FunctionCall {name, arguments} => {
-                write!(writer, "{}", name)?;
-                for (i, a) in arguments.iter().enumerate() {
-                    if i>0 {
-                        write!(writer, " ")?;
-                    }
-                    a.write_to(writer)?;
-                }
+            // Expr::FunctionCall {name, arguments} => {
+            //     write!(writer, "{}", name)?;
+            //     for (i, a) in arguments.iter().enumerate() {
+            //         if i>0 {
+            //             write!(writer, " ")?;
+            //         }
+            //         a.write_to(writer)?;
+            //     }
+            // }
+            Expr::Field { base, field } => {
+                base.write_to(writer)?;
+                write!(writer, "TODOField.{field}")?;
+            }
+            Expr::Select { base, key } => {
+                base.write_to(writer)?;
+                write!(writer, "TODOselectOpen")?;
+                key.write_to(writer)?;
+                write!(writer, "TODOselectClose")?;
             }
             Expr::ExceptOk => {
                 writeln!(writer, "Except.ok ()")?;
@@ -243,6 +269,13 @@ impl Type {
             Type::Int => write!(writer, "Int")?,
             Type::Nat => write!(writer, "Nat")?,
             Type::ParameterType {name} => write!(writer, "{}", name)?,
+            Type::UserDefined { name, type_arguments } => {
+                write!(writer, "{name}")?;
+                for arg in type_arguments {
+                    write!(writer, " ")?;
+                    arg.write_to(writer)?;
+                }
+            }
 
 
             // Type::Function {key, value} => {
@@ -359,6 +392,14 @@ impl BinaryOp {
             BinaryOp::Gte => write!(writer, ">="),
         }
     }
+}
+
+
+pub fn write_expr(e: &Expr) -> String {
+    let mut buf = Vec::new();
+    let mut writer = writer::Writer::new(&mut buf);
+    e.write_to(&mut writer).unwrap();
+    String::from_utf8(buf).unwrap()
 }
 
 #[cfg(test)]

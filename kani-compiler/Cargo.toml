@@ -28,6 +28,7 @@ tracing-subscriber = {version = "0.3.8", features = ["env-filter", "json", "fmt"
 
 # Future proofing: enable backend dependencies using feature.
 [features]
+clion = ["rustc_middle"]
 default = ['lean', 'cprover']
 lean = ['lean_ast']
 cprover = ['cbmc', 'num', 'serde']
@@ -36,3 +37,13 @@ write_json_symtab = []
 [package.metadata.rust-analyzer]
 # This package uses rustc crates.
 rustc_private=true
+
+
+# This configuration doesn't exist so it shouldn't affect your build.
+[target.'cfg(unix)'.dependencies]
+# Adjust the path here to point to a local copy of the rust compiler.
+# The best way is to use the rustup path. Replace <toolchain> with the
+# proper name to your toolchain.
+# rustc_driver = { path = "/User/muqsit/.rustup/toolchains/nightly-2023-12-18-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_driver" }
+# rustc_interface = { path = "/User/muqsit/.rustup/toolchains/nightly-2023-12-18-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_interface" }
+rustc_middle = { path = "/Users/muqsit/.rustup/toolchains/nightly-2023-12-18-aarch64-apple-darwin/lib/rustlib/rustc-src/rust/compiler/rustc_middle", optional = true }

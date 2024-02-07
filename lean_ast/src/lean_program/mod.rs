@@ -6,10 +6,13 @@
 //!
 
 mod writer;
+
+use std::ops::Not;
 use num_bigint::BigInt;
 use num_bigint::BigUint;
 
 /// Lean types
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Type {
     /// Boolean
     Bool, //  true or false
@@ -31,16 +34,27 @@ pub enum Type {
     FunctionType {key: Box<Type>, value: Box<Type>},
 
 
-    Product {typ1: Box<Type>, typ2: Box<Type>}
+    Product {typ1: Box<Type>, typ2: Box<Type>},
     // InputFunction {key: Box<Type>, value: Box<Type>},
 
 
     // (inductive:)
-    // Struct would be Struct
+    /// A user-defined type, e.g. using `type` or `datatype`
+    /// The arguments to generic type parameters are stored in the
+    /// `type_arguments` field.
+    UserDefined { name: String, type_arguments: Vec<Type> },
+}
+
+
+impl Type {
+    pub fn user_defined(name: String, type_arguments: Vec<Type>) -> Self {
+        Self::UserDefined { name, type_arguments }
+    }
 }
 
 
 /// Lean literals
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Literal {
     ///Boolean values: `true` or `false`
     Bool(bool),
@@ -78,6 +92,7 @@ impl Hypothesis {
 }
 
 /// Unary Operators
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum UnaryOp {
     /// Logical negation (`~` or `\lnot`)
     Not,
@@ -90,7 +105,7 @@ pub enum UnaryOp {
 
 
 /// Binary Operators
-
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BinaryOp {
     /// Logical AND (`/\` or `\land`)
     And,
@@ -130,6 +145,7 @@ pub enum BinaryOp {
 }
 
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expr {
     /// Literal (constant) expression
     Literal(Literal),
@@ -143,18 +159,39 @@ pub enum Expr {
     /// Binary operation
     BinaryOp { op: BinaryOp, left: Box<Expr>, right: Box<Expr> },
 
-    /// Function call
-    /// In Lean, functions are first class citizens meaning that
-    /// they are used and manipulated just like any other data, e.g. Ints, Strings.
-    /// Key points: Can be assigned to variables, passed as args, and
-    /// can be return value of a function
-    /// Functions are pure -- `without` side effects -- map input to output deterministically
-    FunctionCall { name: String, arguments: Vec<Expr> },
+    // /// Function call
+    // /// In Lean, functions are first class citizens meaning that
+    // /// they are used and manipulated just like any other data, e.g. Ints, Strings.
+    // /// Key points: Can be assigned to variables, passed as args, and
+    // /// can be return value of a function
+    // /// Functions are pure -- `without` side effects -- map input to output deterministically
+    // FunctionCall { name: String, arguments: Vec<Expr> },
+
+    /// Field operator for data-types
+    Field { base: Box<Expr>, field: String },
+
+    /// Select operation for maps
+    Select { base: Box<Expr>, key: Box<Expr> },
 
     ExceptOk,
 
     ExceptError,
 }
+
+impl ToString for Expr {
+    fn to_string(&self) -> String {
+        writer::write_expr(self)
+    }
+}
+
+impl Not for Expr {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        Expr::UnaryOp { op: UnaryOp::Not, operand: Box::new(self) }
+    }
+}
+
 
 /// Lean Statement
 pub enum Stmt {
@@ -176,6 +213,10 @@ pub enum Stmt {
 
     /// Statement block: `{ statements }`
     Block { statements: Vec<Stmt> },
+
+    FunctionCall { name: String, arguments: Vec<Expr> },
+
+    Skip,
 
     //todo: for now assuming that `else` will always be there
     // which is not true -- make `else` optional
@@ -201,13 +242,21 @@ pub enum Stmt {
     // While { condition: Expr, body: Box<Stmt> },
 }
 
-impl Expr {
-    pub fn literal(l: Literal) -> Self {
-        Expr::Literal(l)
+
+impl Stmt {
+    pub fn block(statements: Vec<Stmt>) -> Self {
+        Self::Block { statements }
     }
 
     pub fn function_call(name: String, arguments: Vec<Expr>) -> Self {
-        Expr::FunctionCall { name, arguments }
+        Stmt::FunctionCall { name, arguments }
+    }
+
+}
+
+impl Expr {
+    pub fn literal(l: Literal) -> Self {
+        Expr::Literal(l)
     }
 
 }
@@ -253,6 +302,20 @@ pub struct Lemma {}
 /// Lean theorem structure
 pub struct Theorem {}
 
+pub struct InductiveDataType {
+
+}
+
+
+/// Structure is a special case of inductive datatype.
+/// It has only one constructor and is not recursive.
+/// General form of Struct:
+/// structure <name> <parameters> <parent-structures> where
+///  <constructor-name> :: <fields>
+pub struct Struct {
+
+}
+
 
 
 /// A Lean program
@@ -287,7 +350,7 @@ impl LeanProgram {
             functions: Vec::new(),
 
             // TODO -- ASSUMES? -- Are these preconditions? - AS HYPOTHESIS in Lean
-            // ingone axioms for now
+            // ignore axioms for now
             // axioms: Vec::new(),
 
             // // sometimes lemmata are also written as theorem but I have also seen lemma in lean
