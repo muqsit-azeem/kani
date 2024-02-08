@@ -272,6 +272,7 @@ impl Type {
             Type::Bool => write!(writer, "Bool")?,
             Type::Int => write!(writer, "Int")?,
             Type::Nat => write!(writer, "Nat")?,
+            Type::Unit => write!(writer, "()")?,
             Type::ParameterType {name} => write!(writer, "{}", name)?,
             Type::UserDefined { name, type_arguments } => {
                 write!(writer, "{name}")?;

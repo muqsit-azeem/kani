@@ -13,13 +13,14 @@ use rustc_middle::mir::interpret::Scalar;
 use rustc_middle::mir::traversal::reverse_postorder;
 use rustc_middle::mir::{BasicBlock, BasicBlockData, BinOp, Body, Const as mirConst, ConstOperand, ConstValue, HasLocalDecls, Local, Operand, Place, ProjectionElem, Rvalue, Statement, StatementKind, SwitchTargets, Terminator, TerminatorKind, UnOp, VarDebugInfoContents};
 
-use rustc_middle::span_bug;
+use rustc_middle::{mir, span_bug};
 use rustc_middle::ty::layout::{
     HasParamEnv, HasTyCtxt, LayoutError, LayoutOf, LayoutOfHelpers, TyAndLayout,
 };
 use rustc_middle::ty::{self, Instance, InstanceDef, IntTy, List, Ty, TyCtxt, UintTy};
 use rustc_span::Span;
-use rustc_target::abi::{HasDataLayout, TargetDataLayout};
+use rustc_target::abi::{Abi, HasDataLayout, TargetDataLayout};
+use std::iter;
 use std::collections::hash_map::Entry;
 use std::collections::HashSet;
 // use std::intrinsics::mir::BasicBlock;
@@ -30,7 +31,7 @@ use tracing::{debug, debug_span, trace};
 
 use super::kani_intrinsic::{get_kani_intrinsic, KaniIntrinsic};
 
-
+pub const FN_RETURN_VOID_VAR_NAME: &str = "()";
 /// A context that provides the main methods for translating MIR constructs to
 /// Lean and stores what has been codegen so far
 pub struct LeanCtx<'tcx> {
@@ -535,10 +536,56 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             // }},
             //todo: if return something include this case as well
             TerminatorKind::Goto { target } => Stmt::Skip,
-            TerminatorKind::Return {..} => {Stmt::Return {expr: Expr::ExceptOk}},
+            TerminatorKind::Return => {
+                let rty = self.fn_sig_of_instance(self.instance).skip_binder().output();
+                if rty.is_unit() {
+                    Stmt::Skip
+                    // todo: Stmt::Return Unit???
+                } else {
+                    let p = Place::from(mir::RETURN_PLACE);
+                    // self.tcx().fn_sig(*def_id).instantiate(self.tcx(), args)
+                    //let rty = self.current_fn().sig().skip_binder().output();
+                    //println!("RETURN TYPE {:?}", rty);
+                    //Stmt::Return {expr: Expr::ExceptOk}
+                    Stmt::Return { expr: self.codegen_place(&p) }
+                }
+            },
             TerminatorKind::Assert { .. } => Stmt::Skip, // TODO: ignore injection assertions for now
             _ => todo!(),
         }
+    }
+
+    // fn codegen_ret_unit(&mut self) -> Stmt {
+    //     let is_file_local = false;
+    //     let ty = self.codegen_ty_unit();
+    //     let var = self.ensure_global_var(
+    //         FN_RETURN_VOID_VAR_NAME,
+    //         is_file_local,
+    //         ty,
+    //         Location::none(),
+    //         |_, _| None,
+    //     );
+    //     Stmt::ret(Some(var), Location::none())
+    // }
+
+    pub fn fn_sig_of_instance(&self, instance: Instance<'tcx>) -> ty::PolyFnSig<'tcx> {
+        let fntyp = instance.ty(self.tcx(), ty::ParamEnv::reveal_all());
+        //self.monomorphize(
+            match fntyp.kind() {
+            ty::Closure(_def_id, _subst) => todo!(),
+            ty::FnDef(..) => {
+                let sig = fntyp.fn_sig(self.tcx());
+                // todo: Calls through vtable or Fn pointer for an ABI that may require untupled arguments.
+                // if self.ty_needs_untupled_args(fntyp) {
+                //     return self.sig_with_untupled_args(sig);
+                // }
+                sig
+            }
+            ty::FnPtr(..) => todo!(),
+            ty::Coroutine(did, args, _) => todo!(),
+            _ => unreachable!("Can't get function signature of type: {:?}", fntyp),
+        }
+        // )
     }
 
     fn codegen_funcall(
@@ -577,10 +624,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
 
                 /// `symbol_name` will contain the name of the function
                 // if let ty::FnDef(defid, _) = funct.kind() {
-                let mut symbol_name = self.tcx().def_path_str(*defid);
-                //     println!("{}", symbol_name);
-                // }
-                symbol_name = self.tcx().symbol_name(instance).name.to_string();
+                // let mut symbol_name = self.tcx().def_path_str(*defid);
+                let symbol_name = self.tcx().symbol_name(instance).name.to_string();
                 let mut stmts: Vec<Stmt> = match instance.def {
                     // Here an empty drop glue is invoked; we just ignore it.
                     // InstanceDef::DropGlue(_, None) => {

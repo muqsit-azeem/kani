@@ -25,6 +25,9 @@ pub enum Type {
     /// Integer
     Int,
 
+    /// Unit Type
+    Unit,
+
     // TODO: Inductive data types -- Enums
 
     /// Generic type, for instance: `T`
