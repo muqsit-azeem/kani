@@ -20,18 +20,17 @@ use rustc_middle::ty::layout::{
 use rustc_middle::ty::{self, Instance, InstanceDef, IntTy, List, Ty, TyCtxt, UintTy};
 use rustc_span::Span;
 use rustc_target::abi::{Abi, HasDataLayout, TargetDataLayout};
-use std::iter;
+// use std::iter;
 use std::collections::hash_map::Entry;
 use std::collections::HashSet;
 // use std::intrinsics::mir::BasicBlock;
 use itertools::Itertools;
 // use serde::de::Unexpected::Option;
-use strum::IntoEnumIterator;
+// use strum::IntoEnumIterator;
 use tracing::{debug, debug_span, trace};
 
-use super::kani_intrinsic::{get_kani_intrinsic, KaniIntrinsic};
+use super::kani_intrinsic::{get_kani_intrinsic};
 
-pub const FN_RETURN_VOID_VAR_NAME: &str = "()";
 /// A context that provides the main methods for translating MIR constructs to
 /// Lean and stores what has been codegen so far
 pub struct LeanCtx<'tcx> {
@@ -47,7 +46,7 @@ pub struct LeanCtx<'tcx> {
 
 impl<'tcx> LeanCtx<'tcx> {
     pub fn new(tcx: TyCtxt<'tcx>, queries: QueryDb) -> LeanCtx<'tcx> {
-        let mut program = LeanProgram::new();
+        let program = LeanProgram::new();
         LeanCtx { tcx, queries, program}
     }
 
@@ -63,7 +62,7 @@ impl<'tcx> LeanCtx<'tcx> {
             return None;
         }
         let mut fcx = FunctionCtx::new(self, instance);
-        let mut decl = fcx.codegen_declare_variables();
+        let decl = fcx.codegen_declare_variables();
         let body = fcx.codegen_body();
         // let ret_temp = fcx.current_fn_typ();
         let ret = fcx.codegen_type(fcx.current_fn_typ());
@@ -125,7 +124,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         let mut name_occurrences: FxHashMap<String, usize> = FxHashMap::default();
         let mir = lcx.tcx.instance_mir(instance.def);
         // Initialize visited_blocks as empty
-        let mut visited_blocks = HashSet::new();
+        let visited_blocks = HashSet::new();
         let ldecls = mir.local_decls();
         for local in ldecls.indices() {
             let debug_info = mir.var_debug_info.iter().find(|info| match info.value {
@@ -200,7 +199,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                 debug!(?lc, ?typ, "codegen_declare_variables");
                 let name = self.local_name(lc).clone();
                 let lean_type = self.codegen_type(typ);
-                /// in lean declaration are implicit with the function name
+                // in lean declaration are implicit with the function name
                 Some(Parameter::new(name, lean_type))
             })
             .collect();
@@ -213,8 +212,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         trace!(typ=?ty, "codegen_type");
         match ty.kind() {
             ty::Bool => Type::Bool,
-            ty::Int(ity) => Type::Int,
-            ty::Uint(uty) => Type::Nat,
+            ty::Int(_ity) => Type::Int,
+            ty::Uint(_uty) => Type::Nat,
             ty::Tuple(types) => {
                 //TODO: Only handles first element of tuple for now (e.g.
                 // ignores overflow field of an addition and only takes the
@@ -327,6 +326,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             StatementKind::Assign(box (place, rvalue)) => {
                 debug!(?place, ?rvalue, "codegen_statement");
                 let place_name = self.local_name(place.local).clone();
+                println!("PLACE NAME: {}", place_name);
                 if let Rvalue::Ref(_, _, rhs) = rvalue {
                     let expr = self.codegen_place(rhs);
                     self.ref_to_expr.insert(*place, expr);
@@ -341,9 +341,11 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                     let asgn = Stmt::Assignment { variable: expr.to_string(), value: rv.1 };
                     add_statement(rv.0, asgn)
                 } else {
+                    println!("PLACE NAME: {}", place_name);
 
                     let rv = self.codegen_rvalue(rvalue);
                     // assignment statement
+
                     let asgn = Stmt::Assignment { variable: place_name, value: rv.1 };
                     // add it to other statements generated while creating the rvalue (if any)
                     add_statement(rv.0, asgn)
@@ -625,7 +627,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                 sig
             }
             ty::FnPtr(..) => todo!(),
-            ty::Coroutine(did, args, _) => todo!(),
+            ty::Coroutine(_did, _args, _) => todo!(),
             _ => unreachable!("Can't get function signature of type: {:?}", fntyp),
         }
         // )
@@ -665,7 +667,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                 let fargs = self.codegen_funcall_args(args);
 
 
-                /// `symbol_name` will contain the name of the function
+                // `symbol_name` will contain the name of the function
                 // if let ty::FnDef(defid, _) = funct.kind() {
                 // let mut symbol_name = self.tcx().def_path_str(*defid);
                 let symbol_name = self.tcx().symbol_name(instance).name.to_string();

@@ -82,6 +82,7 @@ impl Parameter {
 }
 
 
+// todo: remove hypothesis as it is a type of parameter
 pub struct  Hypothesis {
     name: String,
     pred : Expr,

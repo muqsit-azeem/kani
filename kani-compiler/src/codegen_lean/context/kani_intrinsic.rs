@@ -17,8 +17,8 @@ use strum_macros::{EnumString, EnumVariantNames};
 use tracing::debug;
 use lean_ast::lean_program::Expr::{ExceptError, UnaryOp};
 use lean_ast::lean_program::Literal::Int;
-use lean_ast::lean_program::Stmt::{Return, Thm};
-use lean_ast::lean_program::UnaryOp::{Neg,Not};
+use lean_ast::lean_program::Stmt::{Return};
+use lean_ast::lean_program::UnaryOp::{Not};
 
 
 // TODO: move this enum up to `kani_middle`

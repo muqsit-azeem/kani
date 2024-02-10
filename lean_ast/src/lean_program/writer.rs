@@ -428,7 +428,7 @@ mod tests {
             constants: Vec::new(),
             variables: Vec::new(),
             functions: vec![Function {
-                name: "main".to_string(),
+                name: "foo".to_string(),
                 parameters: Vec::new(),
                 //Todo: how to have multiple hypothesis -- Option/Vec?
                 // One way could be to always have `true` as a hypothesis (to have vec)
@@ -506,7 +506,7 @@ mod tests {
         let expected = String::from(
             "\
 -- Functions definition:
-def main : Int := Id.run do
+def foo : Int := Id.run do
   x := 1
   y := 2
   if x = 1 then
@@ -514,7 +514,7 @@ def main : Int := Id.run do
   else
     y := 10
   if !(y = 5) then
-    return Except.error
+    return Except.error \"assertion did not pass\"
   return y
 ",
         );
