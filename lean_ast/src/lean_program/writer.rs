@@ -128,9 +128,12 @@ impl Stmt {
             //TODO: if we are using state Monad for assignments, we should definitely take care of importing IO...
             Stmt::Assignment {variable, value } => {
                 writer.indent()?;
-                write!(writer, "let {} := ", variable)?;
+                write!(writer, "{} := ", variable)?;
                 //todo: What are assignments when we update
                 // write!(writer, "let mut {} := ", variable)?;
+                // because we are using the do notation,
+                // we can avoid this by declaring every varaible
+                // as mutable upfront
                 value.write_to(writer)?;
                 writeln!(writer,"")?;
             }

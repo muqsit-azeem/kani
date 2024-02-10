@@ -66,12 +66,13 @@ impl<'tcx> LeanCtx<'tcx> {
         let mut decl = fcx.codegen_declare_variables();
         let body = fcx.codegen_body();
 
+
         // pair body and a vector of hypothesis
         // pass as is to the constructor
         // decl.push(body);
         Some(Function::new(
             self.tcx.symbol_name(instance).name.to_string(),
-            vec![],
+            decl,
             // todo: keep hypothesis separate? --  no these are just parameters
             None,
             //todo: return type an option - For specific cases now, hardcoded Except with String and Unit Type
@@ -151,10 +152,35 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     }
 
     //TODO: DONE! first pass
+    // fn codegen_declare_variables(&self) -> Vec<Parameter> {
+    //     let ldecls = self.mir.local_decls();
+    //     let decls: Vec<Parameter> = ldecls
+    //         .indices()
+    //         .filter_map(|lc| {
+    //             let typ = self.instance.instantiate_mir_and_normalize_erasing_regions(
+    //                 self.tcx(),
+    //                 ty::ParamEnv::reveal_all(),
+    //                 ty::EarlyBinder::bind(ldecls[lc].ty),
+    //             );
+    //             // skip ZSTs
+    //             if self.layout_of(typ).is_zst() {
+    //                 return None;
+    //             }
+    //             debug!(?lc, ?typ, "codegen_declare_variables");
+    //             let name = self.local_name(lc).clone();
+    //             let lean_type = self.codegen_type(typ);
+    //             /// in lean declaration are implicit with the function name
+    //             Some(Parameter::new (name, lean_type))
+    //         })
+    //         .collect();
+    //     decls
+    // }
     fn codegen_declare_variables(&self) -> Vec<Parameter> {
         let ldecls = self.mir.local_decls();
+        let num_params = self.mir.arg_count; // Assuming `arg_count` gives the number of function arguments excluding the return value.
         let decls: Vec<Parameter> = ldecls
             .indices()
+            .filter(|&lc| lc.index() > 0 && lc.index() <= num_params) //Filter to include only parameters (excluding the return placeholder)
             .filter_map(|lc| {
                 let typ = self.instance.instantiate_mir_and_normalize_erasing_regions(
                     self.tcx(),
@@ -169,11 +195,12 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                 let name = self.local_name(lc).clone();
                 let lean_type = self.codegen_type(typ);
                 /// in lean declaration are implicit with the function name
-                Some(Parameter::new (name, lean_type))
+                Some(Parameter::new(name, lean_type))
             })
             .collect();
         decls
     }
+
 
     //TODO: DONE! first pass
     fn codegen_type(&self, ty: Ty<'tcx>) -> Type {
@@ -206,7 +233,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                     assert!(phantom_data_type.is_phantom_data());
                     let field_type = args.types().exactly_one().unwrap_or_else(|_| panic!());
                     let typ = self.codegen_type(field_type);
-                    Type::user_defined(String::from("TODOArray"), vec![typ])
+                    Type::user_defined(String::from("Array"), vec![typ])
                 } else {
                     todo!()
                 }
@@ -287,6 +314,10 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             //     // add it to other statements generated while creating the rvalue (if any)
             //     add_statement(rv.0, asgn)
             // }
+            //TODO: if the statement has LLalue kani_instrinsics, in particular, Array
+            // arr:
+            // then codegen as follows:
+            // 1.
             StatementKind::Assign(box (place, rvalue)) => {
                 debug!(?place, ?rvalue, "codegen_statement");
                 let place_name = self.local_name(place.local).clone();
@@ -304,6 +335,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                     let asgn = Stmt::Assignment { variable: expr.to_string(), value: rv.1 };
                     add_statement(rv.0, asgn)
                 } else {
+
                     let rv = self.codegen_rvalue(rvalue);
                     // assignment statement
                     let asgn = Stmt::Assignment { variable: place_name, value: rv.1 };
@@ -519,6 +551,10 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         (None, expr)
     }
 
+    fn current_fn_typ(&self) -> Ty<'tcx>{
+        debug!("Current function type{:?}: ",self.fn_sig_of_instance(self.instance).skip_binder().output());
+        self.fn_sig_of_instance(self.instance).skip_binder().output()
+    }
 
     // TODO: fix assert within ifthen else fail here
     fn codegen_terminator(& mut self, term: &Terminator<'tcx>) -> Stmt {
@@ -537,7 +573,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             //todo: if return something include this case as well
             TerminatorKind::Goto { target } => Stmt::Skip,
             TerminatorKind::Return => {
-                let rty = self.fn_sig_of_instance(self.instance).skip_binder().output();
+                // let rty = self.fn_sig_of_instance(self.instance).skip_binder().output();
+                let rty = self.current_fn_typ();
                 if rty.is_unit() {
                     Stmt::Skip
                     // todo: Stmt::Return Unit???
@@ -818,6 +855,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                 if ty.is_primitive() {
                     return Some(self.codegen_operand(o));
                 }
+                //TODO: very specific -- generalize for any bit count, i8,u8,i64,i128,...
                 if ty.to_string() == "kani::array::Array<i32>" {
                     // match o {
                     //     Operand::Copy(place) | Operand::Move(place) => {
