@@ -65,7 +65,13 @@ impl<'tcx> LeanCtx<'tcx> {
         let mut fcx = FunctionCtx::new(self, instance);
         let mut decl = fcx.codegen_declare_variables();
         let body = fcx.codegen_body();
-
+        // let ret_temp = fcx.current_fn_typ();
+        let ret = fcx.codegen_type(fcx.current_fn_typ());
+        // let ret = if ret_temp.is_unit() {
+        //     None
+        // } else {
+        //     Some(ret_temp)
+        // };
 
         // pair body and a vector of hypothesis
         // pass as is to the constructor
@@ -77,7 +83,7 @@ impl<'tcx> LeanCtx<'tcx> {
             None,
             //todo: return type an option - For specific cases now, hardcoded Except with String and Unit Type
             // however, in general, return type \alpha means we return Except String \alpha
-            None,
+            Some(ret),
             body,
         )
         )

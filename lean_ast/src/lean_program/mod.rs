@@ -309,7 +309,6 @@ pub struct InductiveDataType {
 
 }
 
-
 /// Structure is a special case of inductive datatype.
 /// It has only one constructor and is not recursive.
 /// General form of Struct:

@@ -74,16 +74,23 @@ impl Function {
     fn write_to<T: Write>(&self, writer: &mut Writer<T>) -> std::io::Result<()> {
         // signature
         write!(writer, "def ")?;
-        write!(writer, "{}", self.name)?;
+        write!(writer, "{} ", self.name)?;
         // parameters
         for (_i, param) in self.parameters.iter().enumerate() {
-            write!(writer, " (")?;
+            write!(writer, "(")?;
             write!(writer, "{}: ", param.name)?;
             param.typ.write_to(writer)?;
             write!(writer, ") ")?;
         }
-        //todo: fix hardcoding the return type depending on the text in assertions
-        write!(writer, " : Except String Unit")?;
+        //todo: do a case split on the return type
+        // For the outermost function e.g. public function
+        // (--function foo)
+        // Return Except Ok \alpha, where \alpha is
+        // the return type of the function
+        // Do we want to take care of the assertions automatically?
+        // depending on the text in assertions
+        write!(writer, ": ")?;
+        // write!(writer, " : Except String Unit")?;
         if let Some (return_typ) = &self.return_type{
             return_typ.write_to(writer)?;
         } else {
