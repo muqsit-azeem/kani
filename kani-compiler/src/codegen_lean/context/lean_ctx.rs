@@ -181,7 +181,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     // }
     fn codegen_declare_variables(&self) -> Vec<Parameter> {
         let ldecls = self.mir.local_decls();
-        let num_params = self.mir.arg_count; // `arg_count` gives the number of function arguments excluding the return value.
+        // the number of function arguments excluding the return value
+        let num_params = self.mir.arg_count;
         let decls: Vec<Parameter> = ldecls
             .indices()
             .filter(|&lc| lc.index() > 0 && lc.index() <= num_params) //Filter to include only parameters (excluding the return placeholder)
@@ -267,12 +268,60 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     // codegen_body without map
     fn codegen_body(&mut self) -> Vec<Stmt> {
         let mut statements = Vec::new();
-        for (bb, bbd) in reverse_postorder(self.mir) {
+        let ldecls = self.mir.local_decls();
+        // the number of function arguments excluding the return value
+        let num_params = self.mir.arg_count;
+        let decls_stmt: Vec<Stmt> = ldecls
+            .indices()
+            //.filter(|&lc| lc.index() == 0 || lc.index() > num_params) //Filter to include only local vars excluding parameters and return val
+            .filter_map(|lc| {
+                let typ = self.instance.instantiate_mir_and_normalize_erasing_regions(
+                    self.tcx(),
+                    ty::ParamEnv::reveal_all(),
+                    ty::EarlyBinder::bind(ldecls[lc].ty),
+                );
+                // skip ZSTs
+                if self.layout_of(typ).is_zst() {
+                    return None;
+                }
+                debug!(?lc, ?typ, "initialize_variables");
+                let name = self.local_name(lc).clone();
+                let lean_type = self.codegen_type(typ);
+                // in lean declaration are implicit with the function name
+                //Some(Parameter::new(name, lean_type))
+                let val: String = match lean_type {
+                    Type::Bool => {
+                        "true".to_string()
+                    }
+                    Type::Nat => {
+                        "0".to_string()
+                    }
+                    Type::Int => {
+                        "1".to_string()
+                    }
+                    Type::Unit => {
+                        todo!()
+                    }
+                    Type::ParameterType { .. } => {
+                        todo!()
+                    }
+                    Type::FunctionType { .. } => {
+                        todo!()
+                    }
+                    Type::Product { .. } => {
+                        todo!()
+                    }
+                    Type::UserDefined { .. } => {
+                        "#[0]".to_string()
+                    }
+                };
 
+                Some (Stmt::Assignment {variable:name, typ:Some(lean_type), value:Expr::Variable {name:val}})
+            })
+            .collect();
+        statements.extend(decls_stmt);
+        for (bb, bbd) in reverse_postorder(self.mir) {
             if !self.visited_blocks.contains(&bb) {
-            //     for block in self.visited_blocks.iter() {
-            //         println!("{:?}", block);
-            //     }
                 println!("Generating code for block number: {:?}", bb); // Print the block number
                 statements.push(self.codegen_block(bb, bbd)); // Generate the statement and collect it
             }
@@ -323,12 +372,21 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             // then codegen as follows:
             // 1. a:= a.set! index val
             StatementKind::Assign(box (place, rvalue)) => {
+
                 debug!(?place, ?rvalue, "codegen_statement");
                 let place_name = self.local_name(place.local).clone();
                 println!("PLACE NAME: {}", place_name);
                 if let Rvalue::Ref(_, _, rhs) = rvalue {
                     let expr = self.codegen_place(rhs);
                     self.ref_to_expr.insert(*place, expr);
+                    // todo: remove (for debugging specific example)
+                    //
+                    // if place_name == "_5" {
+                    //     Stmt::Skip
+                    // } else if place_name == "_7" {
+                    //     Stmt::Skip
+                    // }
+                    // else { todo!() }
                     Stmt::Skip
                 } else if is_deref(place) {
                     //todo: consider other cases
@@ -338,7 +396,6 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                     let empty_projection = List::empty();
                     let place = Place { local: place.local, projection: empty_projection };
                     let mut place_name = self.local_name(place.local).clone();
-
                     // this gets the name to be used for array.
                     if let Some(expr) = self.ref_to_expr.get(&place) {
                         match expr {
@@ -365,13 +422,14 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                 } else {
                     // println!("PLACE NAME: {}", place_name);
                     let rv = self.codegen_rvalue(rvalue);
-                    let new_place_name = if place_name == *self.local_name(Place::from(mir::RETURN_PLACE).local) {
-                        format!("let {}", place_name)
-                    } else {
-                        place_name
-                    };
+                    // let new_place_name = if place_name == *self.local_name(Place::from(mir::RETURN_PLACE).local) {
+                    //     format!("let {}", place_name)
+                    // } else {
+                    //     place_name
+                    // };
                     // let new_place =  &*String::from("let")  + place_name + &*String::from("let");
-                    let asgn = Stmt::Assignment { variable: new_place_name, value: rv.1 };
+                    let asgn = Stmt::Assignment { variable: place_name, typ:None, value: rv.1 };
+                    // let asgn = Stmt::Assignment { variable: new_place_name, typ:None, value: rv.1 };
                     // add it to other statements generated while creating the rvalue (if any)
                     add_statement(rv.0, asgn)
                 }

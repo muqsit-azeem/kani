@@ -199,7 +199,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
 
         let Expr::Variable { name } = place else { panic!("expecting place to be a symbol") };
 
-        Stmt::Assignment { variable: name, value: len }
+        Stmt::Assignment { variable: name, typ:None, value: len }
     }
 
 
@@ -229,7 +229,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
 
         let Expr::Variable { name } = place else { panic!("expecting place to be a symbol") };
 
-        Stmt::Assignment { variable: name, value: index_expr }
+        Stmt::Assignment { variable: name, typ: None, value: index_expr }
     }
 
     fn codegen_kani_any_array_index_mut(

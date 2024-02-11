@@ -133,14 +133,26 @@ impl Stmt {
         //! https://lean-lang.org/functional_programming_in_lean/monad-transformers/do.html?highlight=mutable#mutable-variables
         match self {
             //TODO: if we are using state Monad for assignments, we should definitely take care of importing IO...
-            Stmt::Assignment {variable, value } => {
-                writer.indent()?;
-                write!(writer, "{} := ", variable)?;
-                println!("VAR{} := ", variable);
+            Stmt::Assignment {variable, typ, value } => {
+                match typ {
+                    Some(typ) => {
+                        writer.indent()?;
+                        write!(writer, "let mut {} ", variable)?;
+                        write!(writer, ": ")?;
+                        typ.write_to(writer)?;
+                        write!(writer, " := ")?;
+                    },
+                    None => {
+                        writer.indent()?;
+                        write!(writer, "{} ", variable)?;
+                        println!("VAR{} := ", variable);
+                        write!(writer, ":= ")?;
+                    }
+                }
                 //todo: What are assignments when we update
                 // write!(writer, "let mut {} := ", variable)?;
                 // because we are using the do notation,
-                // we can avoid this by declaring every varaible
+                // we can avoid this by declaring every variable
                 // as mutable upfront
                 value.write_to(writer)?;
                 writeln!(writer,"")?;
@@ -148,7 +160,7 @@ impl Stmt {
 
             Stmt::ArrayAssignment {variable, var_exp, value } => {
                 writer.indent()?;
-                write!(writer, "let {} := ", variable)?;
+                write!(writer, "{} := ", variable)?;
                 write!(writer, "{} ", var_exp)?;
                 print!("VAR{} := ", variable);
                 println!("VAREXP{} := ", var_exp);
@@ -454,10 +466,12 @@ mod tests {
                 body: vec![
                         Stmt::Assignment {
                             variable: "x".to_string(),
+                            typ: None,
                             value: Expr::Literal(Literal::Int(1.into())),
                         },
                         Stmt::Assignment {
                             variable: "y".to_string(),
+                            typ: None,
                             value: Expr::Literal(Literal::Int(2.into())),
                         },
                         Stmt::IfThenElse {
@@ -468,11 +482,13 @@ mod tests {
                             },
                             then_branch: Box::new(Stmt::Assignment {
                                 variable: "y".to_string(),
+                                typ: None,
                                 value: Expr::Literal(Literal::Int(5.into())),
                             }),
                             // else_branch: None,
                             else_branch: Some(Box::new(Stmt::Assignment {
                                 variable: "y".to_string(),
+                                typ: None,
                                 value: Expr::Literal(Literal::Int(10.into())),
                             })),
                         },

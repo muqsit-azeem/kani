@@ -203,7 +203,7 @@ pub enum Stmt {
     /// Expr(Expr),
 
     /// Assignment statement
-    Assignment { variable: String, value: Expr },
+    Assignment { variable: String, typ: Option<Type>, value: Expr },
 
     /// Special handing of Assignment statement
     ArrayAssignment { variable: String, var_exp: String, value: Expr },
