@@ -271,54 +271,53 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         let ldecls = self.mir.local_decls();
         // the number of function arguments excluding the return value
         let num_params = self.mir.arg_count;
-        let decls_stmt: Vec<Stmt> = ldecls
-            .indices()
-            //.filter(|&lc| lc.index() == 0 || lc.index() > num_params) //Filter to include only local vars excluding parameters and return val
-            .filter_map(|lc| {
-                let typ = self.instance.instantiate_mir_and_normalize_erasing_regions(
-                    self.tcx(),
-                    ty::ParamEnv::reveal_all(),
-                    ty::EarlyBinder::bind(ldecls[lc].ty),
-                );
-                // skip ZSTs
-                if self.layout_of(typ).is_zst() {
-                    return None;
-                }
-                debug!(?lc, ?typ, "initialize_variables");
-                let name = self.local_name(lc).clone();
-                let lean_type = self.codegen_type(typ);
-                // in lean declaration are implicit with the function name
-                //Some(Parameter::new(name, lean_type))
-                let val: String = match lean_type {
-                    Type::Bool => {
-                        "true".to_string()
-                    }
-                    Type::Nat => {
-                        "0".to_string()
-                    }
-                    Type::Int => {
-                        "1".to_string()
-                    }
-                    Type::Unit => {
-                        todo!()
-                    }
-                    Type::ParameterType { .. } => {
-                        todo!()
-                    }
-                    Type::FunctionType { .. } => {
-                        todo!()
-                    }
-                    Type::Product { .. } => {
-                        todo!()
-                    }
-                    Type::UserDefined { .. } => {
-                        "#[0]".to_string()
-                    }
-                };
+        let mut decls_stmt: Vec<Stmt> = Vec::new();
 
-                Some (Stmt::Assignment {variable:name, typ:Some(lean_type), value:Expr::Variable {name:val}})
-            })
-            .collect();
+        for lc in ldecls.indices() {
+            let typ = self.instance.instantiate_mir_and_normalize_erasing_regions(
+                self.tcx(),
+                ty::ParamEnv::reveal_all(),
+                ty::EarlyBinder::bind(ldecls[lc].ty),
+            );
+
+            // Skip ZST
+            if self.layout_of(typ).is_zst() {
+                continue;
+            }
+
+            debug!(?lc, ?typ, "initialize_variables");
+            let name = self.local_name(lc).clone();
+            let lean_type = self.codegen_type(typ);
+
+            // a default value based on type
+            let val: String = match lean_type {
+                Type::Bool => "true".to_string(),
+                Type::Nat => "0".to_string(),
+                Type::Int => "1".to_string(),
+                Type::Unit | Type::ParameterType { .. } | Type::FunctionType { .. } | Type::Product { .. } => {
+                    todo!()
+                },
+                Type::UserDefined { .. } => "#[0]".to_string(),
+            };
+
+            if lc.index() == 0 || lc.index() > num_params {
+                let stmt = Stmt::Assignment {
+                    variable: name,
+                    typ: Some(lean_type),
+                    value: Expr::Variable { name: val },
+                };
+                decls_stmt.push(stmt);
+            }
+            else {
+                let stmt = Stmt::Assignment {
+                    variable: name.clone(),
+                    typ: Some(lean_type),
+                    value: Expr::Variable { name },
+                };
+                decls_stmt.push(stmt);
+            }
+        }
+
         statements.extend(decls_stmt);
         for (bb, bbd) in reverse_postorder(self.mir) {
             if !self.visited_blocks.contains(&bb) {
@@ -368,7 +367,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             //     add_statement(rv.0, asgn)
             // }
             //TODO: if the statement has Lvalue kani_instrinsics Array
-            // e.g., a[index]q=val
+            // e.g., a[index]=val
             // then codegen as follows:
             // 1. a:= a.set! index val
             StatementKind::Assign(box (place, rvalue)) => {
