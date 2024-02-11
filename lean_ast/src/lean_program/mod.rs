@@ -205,6 +205,9 @@ pub enum Stmt {
     /// Assignment statement
     Assignment { variable: String, value: Expr },
 
+    /// Special handing of Assignment statement
+    ArrayAssignment { variable: String, var_exp: String, value: Expr },
+
     /// Declaration statement
     /// constant b : ℕ
     /// https://lean-lang.org/reference/declarations.html

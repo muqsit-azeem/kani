@@ -136,10 +136,26 @@ impl Stmt {
             Stmt::Assignment {variable, value } => {
                 writer.indent()?;
                 write!(writer, "{} := ", variable)?;
+                println!("VAR{} := ", variable);
                 //todo: What are assignments when we update
                 // write!(writer, "let mut {} := ", variable)?;
                 // because we are using the do notation,
                 // we can avoid this by declaring every varaible
+                // as mutable upfront
+                value.write_to(writer)?;
+                writeln!(writer,"")?;
+            }
+
+            Stmt::ArrayAssignment {variable, var_exp, value } => {
+                writer.indent()?;
+                write!(writer, "let {} := ", variable)?;
+                write!(writer, "{} ", var_exp)?;
+                print!("VAR{} := ", variable);
+                println!("VAREXP{} := ", var_exp);
+                //todo: What are assignments when we update
+                // write!(writer, "let mut {} := ", variable)?;
+                // because we are using the do notation,
+                // we can avoid this by declaring every variable
                 // as mutable upfront
                 value.write_to(writer)?;
                 writeln!(writer,"")?;
@@ -193,6 +209,7 @@ impl Stmt {
                     writer.indent()?;
                     writeln!(writer, "else")?;
                     writer.increase_indent();
+                    //writer.increase_indent();
                     else_branch.write_to(writer)?;
                     writer.decrease_indent();
                 }

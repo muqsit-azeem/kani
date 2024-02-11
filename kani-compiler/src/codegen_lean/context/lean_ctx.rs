@@ -156,7 +156,6 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         Self { lcx, instance, mir, local_names, ref_to_expr: FxHashMap::default(), visited_blocks, }
     }
 
-    //TODO: DONE! first pass
     // fn codegen_declare_variables(&self) -> Vec<Parameter> {
     //     let ldecls = self.mir.local_decls();
     //     let decls: Vec<Parameter> = ldecls
@@ -182,7 +181,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     // }
     fn codegen_declare_variables(&self) -> Vec<Parameter> {
         let ldecls = self.mir.local_decls();
-        let num_params = self.mir.arg_count; // Assuming `arg_count` gives the number of function arguments excluding the return value.
+        let num_params = self.mir.arg_count; // `arg_count` gives the number of function arguments excluding the return value.
         let decls: Vec<Parameter> = ldecls
             .indices()
             .filter(|&lc| lc.index() > 0 && lc.index() <= num_params) //Filter to include only parameters (excluding the return placeholder)
@@ -319,10 +318,10 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             //     // add it to other statements generated while creating the rvalue (if any)
             //     add_statement(rv.0, asgn)
             // }
-            //TODO: if the statement has LLalue kani_instrinsics, in particular, Array
-            // arr:
+            //TODO: if the statement has Lvalue kani_instrinsics Array
+            // e.g., a[index]q=val
             // then codegen as follows:
-            // 1.
+            // 1. a:= a.set! index val
             StatementKind::Assign(box (place, rvalue)) => {
                 debug!(?place, ?rvalue, "codegen_statement");
                 let place_name = self.local_name(place.local).clone();
@@ -332,21 +331,47 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                     self.ref_to_expr.insert(*place, expr);
                     Stmt::Skip
                 } else if is_deref(place) {
+                    //todo: consider other cases
+                    // Only Kani intrinsic Arrays are covered
                     // lookup the place itself
                     debug!(?self.ref_to_expr, ?place, ?place.local, "codegen_statement_assign_deref");
                     let empty_projection = List::empty();
                     let place = Place { local: place.local, projection: empty_projection };
+                    let mut place_name = self.local_name(place.local).clone();
+
+                    // this gets the name to be used for array.
+                    if let Some(expr) = self.ref_to_expr.get(&place) {
+                        match expr {
+                            Expr::Select { base, .. } => match &**base {
+                                Expr::Field { base: field_base, .. } => match &**field_base {
+                                    Expr::Variable { name, .. } => {
+                                        place_name = name.to_string();
+                                    },
+                                    _ => {},
+                                },
+                                _ => {},
+                            },
+                            _ => {},
+                        }
+                    }
+
                     let expr = self.ref_to_expr.get(&place).unwrap();
                     let rv = self.codegen_rvalue(rvalue);
-                    let asgn = Stmt::Assignment { variable: expr.to_string(), value: rv.1 };
+                    //let asgn = Stmt::Assignment { variable: expr.to_string(), value: rv.1 };
+                    println!("PLACE NAME {}", place_name);
+                    println!("EXPR NAME {}", expr.to_string());
+                    let asgn = Stmt::ArrayAssignment { variable: place_name, var_exp: expr.to_string(), value: rv.1 };
                     add_statement(rv.0, asgn)
                 } else {
-                    println!("PLACE NAME: {}", place_name);
-
+                    // println!("PLACE NAME: {}", place_name);
                     let rv = self.codegen_rvalue(rvalue);
-                    // assignment statement
-
-                    let asgn = Stmt::Assignment { variable: place_name, value: rv.1 };
+                    let new_place_name = if place_name == *self.local_name(Place::from(mir::RETURN_PLACE).local) {
+                        format!("let {}", place_name)
+                    } else {
+                        place_name
+                    };
+                    // let new_place =  &*String::from("let")  + place_name + &*String::from("let");
+                    let asgn = Stmt::Assignment { variable: new_place_name, value: rv.1 };
                     // add it to other statements generated while creating the rvalue (if any)
                     add_statement(rv.0, asgn)
                 }
@@ -420,7 +445,6 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         if targets.all_targets().len() == 2 {
             let then = targets.iter().next().unwrap();
             self.visited_blocks.insert(then.1);
-
             let bbd_then = self.mir.basic_blocks[then.1].clone();
             let then_statements = match bbd_then.statements.len() {
                 0 => {
