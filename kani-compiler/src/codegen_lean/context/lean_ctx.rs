@@ -847,7 +847,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                     // InstanceDef::ThreadLocalShim(_) => todo!(),
                 };
                 // the way MIR is designed for function call, it will always have a return block
-                stmts.push(self.codegen_block(target.unwrap(), &self.mir.basic_blocks[target.unwrap()]));
+                // stmts.push(self.codegen_block(target.unwrap(), &self.mir.basic_blocks[target.unwrap()]));
                 stmts.push(Stmt::Skip);
                 Stmt::block(stmts)
             }

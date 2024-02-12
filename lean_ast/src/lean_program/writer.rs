@@ -233,7 +233,7 @@ impl Stmt {
                     println!("BeforeElseIndent {}", writer.indentation);
                     writeln!(writer, "else")?;
                     writer.increase_indent();
-                    // writer.increase_indent();
+                    writer.increase_indent();
                     println!("BeforeElseBlockIndent {}", writer.indentation);
                     else_branch.write_to(writer)?;
                     writer.decrease_indent();
