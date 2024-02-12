@@ -230,6 +230,7 @@ impl Stmt {
                 writer.indent()?;
                 write!(writer, "return ",)?;
                 expr.write_to(writer)?;
+                writeln!(writer, "")?;
             }
 
             _ => {

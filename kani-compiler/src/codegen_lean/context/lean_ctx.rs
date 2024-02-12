@@ -323,6 +323,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             if !self.visited_blocks.contains(&bb) {
                 println!("Generating code for block number: {:?}", bb); // Print the block number
                 statements.push(self.codegen_block(bb, bbd)); // Generate the statement and collect it
+            } else {
+                println!("SKIPPING regeneration of code for block number: {:?}", bb);
             }
         }
         statements
@@ -660,7 +662,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             //     value: Expr::Literal(Literal::Int(1.into())),
             // }},
             //todo: if return something include this case as well
-            TerminatorKind::Goto { target } => Stmt::Skip,
+            TerminatorKind::Goto { target } => self.codegen_block(*target, &self.mir.basic_blocks[*target]),
             TerminatorKind::Return => {
                 // let rty = self.fn_sig_of_instance(self.instance).skip_binder().output();
                 let rty = self.current_fn_typ();
@@ -696,7 +698,6 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
 
     pub fn fn_sig_of_instance(&self, instance: Instance<'tcx>) -> ty::PolyFnSig<'tcx> {
         let fntyp = instance.ty(self.tcx(), ty::ParamEnv::reveal_all());
-        //self.monomorphize(
             match fntyp.kind() {
             ty::Closure(_def_id, _subst) => todo!(),
             ty::FnDef(..) => {
@@ -711,7 +712,6 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             ty::Coroutine(_did, _args, _) => todo!(),
             _ => unreachable!("Can't get function signature of type: {:?}", fntyp),
         }
-        // )
     }
 
     fn codegen_funcall(
