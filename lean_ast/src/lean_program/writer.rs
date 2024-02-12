@@ -279,7 +279,7 @@ impl Expr {
                 right.write_to(writer)?;
             }
             Expr::FunctionCall {name, arguments} => {
-                write!(writer, "{}", name)?;
+                write!(writer, "{} ", name)?;
                 for (i, a) in arguments.iter().enumerate() {
                     if i>0 {
                         write!(writer, " ")?;
