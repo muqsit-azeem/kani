@@ -72,6 +72,7 @@ impl LeanProgram {
 
 impl Function {
     fn write_to<T: Write>(&self, writer: &mut Writer<T>) -> std::io::Result<()> {
+        writer.indentation = 0;
         // signature
         write!(writer, "def ")?;
         write!(writer, "{} ", self.name)?;

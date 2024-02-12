@@ -846,9 +846,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                     // }
                     // InstanceDef::ThreadLocalShim(_) => todo!(),
                 };
-                // todo!()
-                // stmts.push(self.codegen_end_call(target.as_ref(), loc));
-
+                // the way MIR is designed for function call, it will always have a return block
+                stmts.push(self.codegen_block(target.unwrap(), &self.mir.basic_blocks[target.unwrap()]));
                 stmts.push(Stmt::Skip);
                 Stmt::block(stmts)
             }
@@ -945,6 +944,15 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
             _ => todo!(),
         }
     }
+
+    // fn codegen_end_call(&self, target: Option<&BasicBlock>) -> Stmt {
+    //     if let Some(next_bb) = target {
+    //         Stmt::goto(self.current_fn().find_label(next_bb))
+    //     } else {
+    //         todo!()
+    //     }
+    // }
+
 
     // /// Generate a goto expression that references the function identified by `instance`.
     // ///
