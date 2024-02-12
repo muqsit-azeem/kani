@@ -377,6 +377,9 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                 debug!(?place, ?rvalue, "codegen_statement");
                 let place_name = self.local_name(place.local).clone();
                 println!("PLACE NAME: {}", place_name);
+                if (place_name == "_9") {
+                    println!("PLACE NAME: {}", place_name);
+                }
                 if let Rvalue::Ref(_, _, rhs) = rvalue {
                     let expr = self.codegen_place(rhs);
                     self.ref_to_expr.insert(*place, expr);
@@ -653,7 +656,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         debug!("handling terminator {:?}", term);
         match &term.kind {
             TerminatorKind::Call { func, args, destination, target, .. } => {
-                self.codegen_funcall(func, args, destination, target, term.source_info.span)
+                self.codegen_funcall_rval(func, args, destination, target, term.source_info.span)
             }
             TerminatorKind::SwitchInt { discr, targets } => self.codegen_switch_int(discr, targets),
             // todo: handle terminator return
@@ -890,6 +893,153 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                 //     // }
                 //     // x => unreachable!("Function call where the function was of unexpected type: {:?}", x),
                 // }
+            //     todo!()
+            // }
+
+
+
+            _ => todo!(),
+        }
+    }
+
+
+    fn codegen_funcall_rval(
+        &mut self,
+        func: &Operand<'tcx>,
+        args: &[Operand<'tcx>],
+        destination: &Place<'tcx>,
+        target: &Option<BasicBlock>,
+        span: Span,
+    ) -> Expr {
+        debug!(?func, ?args, ?destination, ?span, "codegen_funcall_rval");
+
+        let funct = self.operand_ty(func);
+        // TODO: Only Kani intrinsics are handled currently
+        match &funct.kind() {
+            ty::FnDef(defid, substs) => {
+                let instance = Instance::expect_resolve(
+                    self.tcx(),
+                    ty::ParamEnv::reveal_all(),
+                    *defid,
+                    substs,
+                );
+                let fargs = self.codegen_funcall_args(args);
+
+
+                // `symbol_name` will contain the name of the function
+                // if let ty::FnDef(defid, _) = funct.kind() {
+                // let mut symbol_name = self.tcx().def_path_str(*defid);
+                let symbol_name = self.tcx().symbol_name(instance).name.to_string();
+                let mut expr = match instance.def {
+                    InstanceDef::Item(..) => {
+                        Expr::function_call(symbol_name, fargs)
+                    }
+                    _ => todo!(),
+                    // InstanceDef::DropGlue(_, Some(_))
+                    // | InstanceDef::FnPtrAddrShim(_, _)
+                    // | InstanceDef::Intrinsic(..)
+                    // | InstanceDef::FnPtrShim(..)
+                    // | InstanceDef::VTableShim(..)
+                    // | InstanceDef::ReifyShim(..)
+                    // | InstanceDef::ClosureOnceShim { .. }
+                    // | InstanceDef::CloneShim(..) => {
+                    //     // We need to handle FnDef items in a special way because `codegen_operand` compiles them to dummy structs.
+                    //     // (cf. the function documentation)
+                    //     let func_exp = self.codegen_func_expr(instance, None);
+                    //     vec![
+                    //         self.codegen_expr_to_place(destination, func_exp.call(fargs))
+                    //             .with_location(loc),
+                    //     ]
+                    // }
+                    // InstanceDef::ThreadLocalShim(_) => todo!(),
+                };
+                expr
+            }
+
+
+            // // let loc = self.codegen_span(&span);
+            // let funct = self.operand_ty(func);
+            // let mut fargs = self.codegen_funcall_args(args);
+            // match &funct.kind() {
+            //     ty::FnDef(defid, subst) => {
+            //         let instance =
+            //             Instance::resolve(self.tcx(), ty::ParamEnv::reveal_all(), *defid, subst)
+            //                 .unwrap()
+            //                 .unwrap();
+            //
+            //         // if self.ty_needs_untupled_args(funct) {
+            //         //     self.codegen_untupled_args(instance, &mut fargs, args.last());
+            //         // }
+            //
+            //         // if let Some(hk) = self.hooks.hook_applies(self.tcx, instance) {
+            //         //     return hk.handle(self, instance, fargs, *destination, *target, Some(span));
+            //         // }
+            //
+            //         let mut stmts: Vec<Stmt> = match instance.def {
+            //             // Here an empty drop glue is invoked; we just ignore it.
+            //             // InstanceDef::DropGlue(_, None) => {
+            //             //     return Stmt::goto(self.current_fn().find_label(&target.unwrap()), loc);
+            //             // }
+            //             // // Handle a virtual function call via a vtable lookup
+            //             // InstanceDef::Virtual(def_id, idx) => {
+            //             //     let self_ty = self.operand_ty(&args[0]);
+            //             //     self.codegen_virtual_funcall(
+            //             //         self_ty,
+            //             //         def_id,
+            //             //         idx,
+            //             //         destination,
+            //             //         &mut fargs,
+            //             //         loc,
+            //             //     )
+            //             // }
+            //             // Normal, non-virtual function calls
+            //             InstanceDef::Item(..) => {
+            //                 // We need to handle FnDef items in a special way because `codegen_operand` compiles them to dummy structs.
+            //                 // (cf. the function documentation)
+            //                 let func_exp = self.codegen_func_expr(instance, None);
+            //                 vec![
+            //                     self.codegen_expr_to_place(destination, func_exp.call(fargs)),
+            //                 ]
+            //             }
+            //             _ => todo!(),
+            //             // InstanceDef::DropGlue(_, Some(_))
+            //             // | InstanceDef::FnPtrAddrShim(_, _)
+            //             // | InstanceDef::Intrinsic(..)
+            //             // | InstanceDef::FnPtrShim(..)
+            //             // | InstanceDef::VTableShim(..)
+            //             // | InstanceDef::ReifyShim(..)
+            //             // | InstanceDef::ClosureOnceShim { .. }
+            //             // | InstanceDef::CloneShim(..) => {
+            //             //     // We need to handle FnDef items in a special way because `codegen_operand` compiles them to dummy structs.
+            //             //     // (cf. the function documentation)
+            //             //     let func_exp = self.codegen_func_expr(instance, None);
+            //             //     vec![
+            //             //         self.codegen_expr_to_place(destination, func_exp.call(fargs))
+            //             //             .with_location(loc),
+            //             //     ]
+            //             // }
+            //             // InstanceDef::ThreadLocalShim(_) => todo!(),
+            //         };
+            //         todo!()
+            //         // stmts.push(self.codegen_end_call(target.as_ref(), loc));
+            //         //Stmt::block(stmts)
+            //     }
+            //     _ => todo!()
+            //     // Function call through a pointer
+            //     // ty::FnPtr(_) => {
+            //     //     let func_expr = self.codegen_operand(func).dereference();
+            //     //     // Actually generate the function call and return.
+            //     //     Stmt::block(
+            //     //         vec![
+            //     //             self.codegen_expr_to_place(destination, func_expr.call(fargs))
+            //     //                 .with_location(loc),
+            //     //             Stmt::goto(self.current_fn().find_label(&target.unwrap()), loc),
+            //     //         ],
+            //     //         loc,
+            //     //     )
+            //     // }
+            //     // x => unreachable!("Function call where the function was of unexpected type: {:?}", x),
+            // }
             //     todo!()
             // }
 
@@ -1160,8 +1310,6 @@ impl<'a, 'tcx> HasDataLayout for FunctionCtx<'a, 'tcx> {
 }
 
 
-
-// TODO: done first pass
 /// Create a new statement that includes `s1` (if non-empty) in statements block `s2`
 fn add_statement(s1 :Option<Stmt>, s2: Stmt) -> Stmt {
     match s1 {

@@ -169,7 +169,7 @@ pub enum Expr {
     // /// Key points: Can be assigned to variables, passed as args, and
     // /// can be return value of a function
     // /// Functions are pure -- `without` side effects -- map input to output deterministically
-    // FunctionCall { name: String, arguments: Vec<Expr> },
+    FunctionCall { name: String, arguments: Vec<Expr> },
 
     /// Field operator for data-types
     Field { base: Box<Expr>, field: String },
@@ -265,6 +265,11 @@ impl Expr {
     pub fn literal(l: Literal) -> Self {
         Expr::Literal(l)
     }
+
+    pub fn function_call(name: String, arguments: Vec<Expr>) -> Self {
+        Expr::FunctionCall { name, arguments }
+    }
+
 
 }
 

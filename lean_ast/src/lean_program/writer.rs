@@ -264,15 +264,15 @@ impl Expr {
                 write!(writer, " ")?;
                 right.write_to(writer)?;
             }
-            // Expr::FunctionCall {name, arguments} => {
-            //     write!(writer, "{}", name)?;
-            //     for (i, a) in arguments.iter().enumerate() {
-            //         if i>0 {
-            //             write!(writer, " ")?;
-            //         }
-            //         a.write_to(writer)?;
-            //     }
-            // }
+            Expr::FunctionCall {name, arguments} => {
+                write!(writer, "{}", name)?;
+                for (i, a) in arguments.iter().enumerate() {
+                    if i>0 {
+                        write!(writer, " ")?;
+                    }
+                    a.write_to(writer)?;
+                }
+            }
             Expr::Field { base, field } => {
                 base.write_to(writer)?;
                 // write!(writer, "TODOField {field}")?;
