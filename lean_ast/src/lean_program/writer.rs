@@ -159,11 +159,13 @@ impl Stmt {
             }
 
             Stmt::ArrayAssignment {variable, var_exp, value } => {
+                println!("ArrayAssignmentBeforeEnter{}", writer.indentation);
                 writer.indent()?;
+                println!("ArrayAssignmentAfterEnter{}", writer.indentation);
                 write!(writer, "{} := ", variable)?;
                 write!(writer, "{} ", var_exp)?;
-                print!("VAR{} := ", variable);
-                println!("VAREXP{} := ", var_exp);
+                // print!("VAR{} := ", variable);
+                // println!("VAREXP{} := ", var_exp);
                 //todo: What are assignments when we update
                 // write!(writer, "let mut {} := ", variable)?;
                 // because we are using the do notation,
@@ -189,41 +191,52 @@ impl Stmt {
                 writeln!(writer,"")?;
             }
             Stmt::Block {statements} => {
+                // writer.indent()?;
                 for s in statements {
                     s.write_to(writer)?;
                 }
             }
-            Stmt::FunctionCall {name, arguments} => {
-                writer.indent()?;
-                write!(writer, "{} ", name)?;
-                for (i, a) in arguments.iter().enumerate() {
-                    if i>0 {
-                        write!(writer, " ")?;
-                    }
-                    a.write_to(writer)?;
-                }
-                writeln!(writer,"")?;
-            }
+            // Stmt::FunctionCall {name, arguments} => {
+            //     writer.indent()?;
+            //     //todo: remove hardcoding of _0 := and find work around
+            //     // see github issue: https://github.com/rust-lang/rust/issues/71117
+            //     // write!(writer, "{} ", name)?;
+            //     write!(writer, "_0 := {} ", name)?;
+            //     for (i, a) in arguments.iter().enumerate() {
+            //         if i>0 {
+            //             write!(writer, " ")?;
+            //         }
+            //         a.write_to(writer)?;
+            //     }
+            //     writeln!(writer,"")?;
+            // }
 
 
             //todo: fix this -- remove pass
             //Stmt::Skip => {writeln!(writer, "pass ")?;}
             Stmt::Skip => { }
             Stmt::IfThenElse {cond, then_branch, else_branch} => {
+                println!("BeforeIFthenIndent {}", writer.indentation);
                 writer.indent()?;
+                println!("IFthenStartIndent {}", writer.indentation);
                 write!(writer, "if ")?;
                 cond.write_to(writer)?;
                 writeln!(writer, " then")?;
                 writer.increase_indent();
+                println!("AfterthenIndent {}", writer.indentation);
                 then_branch.write_to(writer)?;
                 writer.decrease_indent();
+                println!("AfterIFTHENIndent {}", writer.indentation);
                 if let Some(else_branch) = else_branch {
                     writer.indent()?;
+                    println!("BeforeElseIndent {}", writer.indentation);
                     writeln!(writer, "else")?;
                     writer.increase_indent();
-                    //writer.increase_indent();
+                    // writer.increase_indent();
+                    println!("BeforeElseBlockIndent {}", writer.indentation);
                     else_branch.write_to(writer)?;
                     writer.decrease_indent();
+                    println!("AfterElseBlockIndent {}", writer.indentation);
                 }
             }
             Stmt::Return {expr} => {

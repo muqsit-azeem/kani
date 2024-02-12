@@ -7,6 +7,7 @@
 
 mod writer;
 
+use std::fmt::Display;
 use std::ops::Not;
 use num_bigint::BigInt;
 use num_bigint::BigUint;
@@ -182,9 +183,9 @@ pub enum Expr {
     ExceptError,
 }
 
-impl ToString for Expr {
-    fn to_string(&self) -> String {
-        writer::write_expr(self)
+impl Display for Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", writer::write_expr(self))
     }
 }
 
@@ -221,7 +222,7 @@ pub enum Stmt {
     /// Statement block: `{ statements }`
     Block { statements: Vec<Stmt> },
 
-    FunctionCall { name: String, arguments: Vec<Expr> },
+    // FunctionCall { name: String, arguments: Vec<Expr> },
 
     Skip,
 
@@ -255,9 +256,9 @@ impl Stmt {
         Self::Block { statements }
     }
 
-    pub fn function_call(name: String, arguments: Vec<Expr>) -> Self {
-        Stmt::FunctionCall { name, arguments }
-    }
+    // pub fn function_call(name: String, arguments: Vec<Expr>) -> Self {
+    //     Stmt::FunctionCall { name, arguments }
+    // }
 
 }
 

@@ -266,8 +266,6 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         self.ref_to_expr.get(place)
     }
 
-
-
 }
 
 

@@ -330,9 +330,6 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         statements
     }
 
-
-
-    // TODO: Done first pass
     fn codegen_block(&mut self, bb: BasicBlock, bbd: &BasicBlockData<'tcx>) -> Stmt {
         debug!(?bb, ?bbd, "codegen_block");
         // println!("{:?} {:?} {}", bb, bbd, "CODEGEN BLOCK");
@@ -504,6 +501,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     fn codegen_switch_int(& mut self, discr: &Operand<'tcx>, targets: &SwitchTargets) -> Stmt {
         debug!(discr=?discr, targets=?targets, "codegen_switch_int");
         let op = self.codegen_operand(discr);
+        println!("targets length {}", targets.iter().len());
         if targets.all_targets().len() == 2 {
             let then = targets.iter().next().unwrap();
             self.visited_blocks.insert(then.1);
@@ -515,11 +513,32 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                     vec![tcode]
                 }
                 _ => {
-                    let mut then_statements: Vec<Stmt> =
-                        bbd_then.statements.iter().map(|stmt| self.codegen_statement(stmt)).collect();
+                    let mut then_statements: Vec<Stmt> = Vec::new();
+
+                    for stmt in &bbd_then.statements {
+                        println!("ADDING then_statements");
+                        let codegen_stmt = self.codegen_statement(stmt);
+                        then_statements.push(codegen_stmt);
+                    }
+
+
+                    if then_statements.is_empty() {
+                        println!("then_statements is empty");
+                    } else {
+                        println!("then_statements is NOT empty{}", then_statements.len());
+                    }
                     let term = self.codegen_terminator(bbd_then.terminator());
                     then_statements.push(term);
+                    if then_statements.is_empty() {
+                        println!("then_statements is empty");
+                    } else {
+                        println!("then_statements is NOT empty {}", then_statements.len());
+                    }
                     println!("Generating code for THEN block number: {:?}", then.1);
+                    // then_statements.push(Stmt::Assignment {
+                    //     variable: "y".to_string(),
+                    //     typ: None,
+                    //     value: Expr::Literal(Literal::Int(2.into()))});
                     then_statements
                 }
             };
@@ -532,10 +551,44 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                     vec![tcode]
                 }
                 _ => {
+
                     let mut else_statements: Vec<Stmt> =
                         bbd_else.statements.iter().map(|stmt| self.codegen_statement(stmt)).collect();
                     let term = self.codegen_terminator(bbd_else.terminator());
+                    if else_statements.is_empty() {
+                        println!("else_statements is empty");
+                    } else {
+                        println!("else_statements is NOT empty {}", else_statements.len());
+                    }
                     else_statements.push(term);
+                    // match bbd_else.terminator().kind {
+                    //     TerminatorKind::Goto {target} => todo!(),
+                    //     TerminatorKind::SwitchInt { ref targets, .. } => todo!(),
+                    //     TerminatorKind::UnwindResume => todo!(),
+                    //     TerminatorKind::UnwindTerminate(_) => todo!(),
+                    //     TerminatorKind::Return => todo!(),
+                    //     TerminatorKind::Unreachable => todo!(),
+                    //     TerminatorKind::Drop { .. } => todo!(),
+                    //     TerminatorKind::Call { .. } => todo!(),
+                    //     TerminatorKind::Assert { .. } => todo!(),
+                    //     TerminatorKind::Yield { .. } => todo!(),
+                    //     TerminatorKind::CoroutineDrop => todo!(),
+                    //     TerminatorKind::FalseEdge { .. } => todo!(),
+                    //     TerminatorKind::FalseUnwind { .. } => todo!(),
+                    //     TerminatorKind::InlineAsm { .. } => todo!(),
+                    // }
+
+                    //return: bbk, success: bbj
+
+                    // else_statements.push(Stmt::Assignment {
+                    //     variable: "y".to_string(),
+                    //     typ: None,
+                    //     value: Expr::Literal(Literal::Int(2.into()))});
+                    if else_statements.is_empty() {
+                        println!("else_statements is empty");
+                    } else {
+                        println!("else_statements is NOT empty {}", else_statements.len());
+                    }
                     println!("Generating code for ELSE block number: {:?}", targets.otherwise());
                     else_statements
                 }
@@ -656,27 +709,18 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         debug!("handling terminator {:?}", term);
         match &term.kind {
             TerminatorKind::Call { func, args, destination, target, .. } => {
-                self.codegen_funcall_rval(func, args, destination, target, term.source_info.span)
+                self.codegen_funcall(func, args, destination, target, term.source_info.span)
             }
             TerminatorKind::SwitchInt { discr, targets } => self.codegen_switch_int(discr, targets),
-            // todo: handle terminator return
-            // TerminatorKind::Return {..} => {Stmt::Assignment {
-            //     variable: "x".to_string(),
-            //     value: Expr::Literal(Literal::Int(1.into())),
-            // }},
-            //todo: if return something include this case as well
             TerminatorKind::Goto { target } => self.codegen_block(*target, &self.mir.basic_blocks[*target]),
             TerminatorKind::Return => {
                 // let rty = self.fn_sig_of_instance(self.instance).skip_binder().output();
                 let rty = self.current_fn_typ();
                 if rty.is_unit() {
-                    Stmt::Skip
                     // todo: Stmt::Return Unit???
+                    Stmt::Skip
                 } else {
                     let p = Place::from(mir::RETURN_PLACE);
-                    // self.tcx().fn_sig(*def_id).instantiate(self.tcx(), args)
-                    //let rty = self.current_fn().sig().skip_binder().output();
-                    //println!("RETURN TYPE {:?}", rty);
                     //Stmt::Return {expr: Expr::ExceptOk}
                     Stmt::Return { expr: self.codegen_place(&p) }
                 }
@@ -726,7 +770,6 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         span: Span,
     ) -> Stmt {
         debug!(?func, ?args, ?destination, ?span, "codegen_funcall");
-
         let funct = self.operand_ty(func);
         // TODO: Only Kani intrinsics are handled currently
         match &funct.kind() {
@@ -780,7 +823,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                         // vec![
                         //     self.codegen_expr_to_place(destination, func_exp.call(fargs)),
                         // ]
-                        vec![Stmt::function_call(symbol_name, fargs)]
+                        // vec![Stmt::function_call(symbol_name, fargs)]
+                        vec![Stmt::Assignment {variable: self.local_name(destination.local).clone(), typ: None, value: Expr::function_call(symbol_name, fargs)}]
                         // vec![]
                     }
                     _ => todo!(),
@@ -893,153 +937,6 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                 //     // }
                 //     // x => unreachable!("Function call where the function was of unexpected type: {:?}", x),
                 // }
-            //     todo!()
-            // }
-
-
-
-            _ => todo!(),
-        }
-    }
-
-
-    fn codegen_funcall_rval(
-        &mut self,
-        func: &Operand<'tcx>,
-        args: &[Operand<'tcx>],
-        destination: &Place<'tcx>,
-        target: &Option<BasicBlock>,
-        span: Span,
-    ) -> Expr {
-        debug!(?func, ?args, ?destination, ?span, "codegen_funcall_rval");
-
-        let funct = self.operand_ty(func);
-        // TODO: Only Kani intrinsics are handled currently
-        match &funct.kind() {
-            ty::FnDef(defid, substs) => {
-                let instance = Instance::expect_resolve(
-                    self.tcx(),
-                    ty::ParamEnv::reveal_all(),
-                    *defid,
-                    substs,
-                );
-                let fargs = self.codegen_funcall_args(args);
-
-
-                // `symbol_name` will contain the name of the function
-                // if let ty::FnDef(defid, _) = funct.kind() {
-                // let mut symbol_name = self.tcx().def_path_str(*defid);
-                let symbol_name = self.tcx().symbol_name(instance).name.to_string();
-                let mut expr = match instance.def {
-                    InstanceDef::Item(..) => {
-                        Expr::function_call(symbol_name, fargs)
-                    }
-                    _ => todo!(),
-                    // InstanceDef::DropGlue(_, Some(_))
-                    // | InstanceDef::FnPtrAddrShim(_, _)
-                    // | InstanceDef::Intrinsic(..)
-                    // | InstanceDef::FnPtrShim(..)
-                    // | InstanceDef::VTableShim(..)
-                    // | InstanceDef::ReifyShim(..)
-                    // | InstanceDef::ClosureOnceShim { .. }
-                    // | InstanceDef::CloneShim(..) => {
-                    //     // We need to handle FnDef items in a special way because `codegen_operand` compiles them to dummy structs.
-                    //     // (cf. the function documentation)
-                    //     let func_exp = self.codegen_func_expr(instance, None);
-                    //     vec![
-                    //         self.codegen_expr_to_place(destination, func_exp.call(fargs))
-                    //             .with_location(loc),
-                    //     ]
-                    // }
-                    // InstanceDef::ThreadLocalShim(_) => todo!(),
-                };
-                expr
-            }
-
-
-            // // let loc = self.codegen_span(&span);
-            // let funct = self.operand_ty(func);
-            // let mut fargs = self.codegen_funcall_args(args);
-            // match &funct.kind() {
-            //     ty::FnDef(defid, subst) => {
-            //         let instance =
-            //             Instance::resolve(self.tcx(), ty::ParamEnv::reveal_all(), *defid, subst)
-            //                 .unwrap()
-            //                 .unwrap();
-            //
-            //         // if self.ty_needs_untupled_args(funct) {
-            //         //     self.codegen_untupled_args(instance, &mut fargs, args.last());
-            //         // }
-            //
-            //         // if let Some(hk) = self.hooks.hook_applies(self.tcx, instance) {
-            //         //     return hk.handle(self, instance, fargs, *destination, *target, Some(span));
-            //         // }
-            //
-            //         let mut stmts: Vec<Stmt> = match instance.def {
-            //             // Here an empty drop glue is invoked; we just ignore it.
-            //             // InstanceDef::DropGlue(_, None) => {
-            //             //     return Stmt::goto(self.current_fn().find_label(&target.unwrap()), loc);
-            //             // }
-            //             // // Handle a virtual function call via a vtable lookup
-            //             // InstanceDef::Virtual(def_id, idx) => {
-            //             //     let self_ty = self.operand_ty(&args[0]);
-            //             //     self.codegen_virtual_funcall(
-            //             //         self_ty,
-            //             //         def_id,
-            //             //         idx,
-            //             //         destination,
-            //             //         &mut fargs,
-            //             //         loc,
-            //             //     )
-            //             // }
-            //             // Normal, non-virtual function calls
-            //             InstanceDef::Item(..) => {
-            //                 // We need to handle FnDef items in a special way because `codegen_operand` compiles them to dummy structs.
-            //                 // (cf. the function documentation)
-            //                 let func_exp = self.codegen_func_expr(instance, None);
-            //                 vec![
-            //                     self.codegen_expr_to_place(destination, func_exp.call(fargs)),
-            //                 ]
-            //             }
-            //             _ => todo!(),
-            //             // InstanceDef::DropGlue(_, Some(_))
-            //             // | InstanceDef::FnPtrAddrShim(_, _)
-            //             // | InstanceDef::Intrinsic(..)
-            //             // | InstanceDef::FnPtrShim(..)
-            //             // | InstanceDef::VTableShim(..)
-            //             // | InstanceDef::ReifyShim(..)
-            //             // | InstanceDef::ClosureOnceShim { .. }
-            //             // | InstanceDef::CloneShim(..) => {
-            //             //     // We need to handle FnDef items in a special way because `codegen_operand` compiles them to dummy structs.
-            //             //     // (cf. the function documentation)
-            //             //     let func_exp = self.codegen_func_expr(instance, None);
-            //             //     vec![
-            //             //         self.codegen_expr_to_place(destination, func_exp.call(fargs))
-            //             //             .with_location(loc),
-            //             //     ]
-            //             // }
-            //             // InstanceDef::ThreadLocalShim(_) => todo!(),
-            //         };
-            //         todo!()
-            //         // stmts.push(self.codegen_end_call(target.as_ref(), loc));
-            //         //Stmt::block(stmts)
-            //     }
-            //     _ => todo!()
-            //     // Function call through a pointer
-            //     // ty::FnPtr(_) => {
-            //     //     let func_expr = self.codegen_operand(func).dereference();
-            //     //     // Actually generate the function call and return.
-            //     //     Stmt::block(
-            //     //         vec![
-            //     //             self.codegen_expr_to_place(destination, func_expr.call(fargs))
-            //     //                 .with_location(loc),
-            //     //             Stmt::goto(self.current_fn().find_label(&target.unwrap()), loc),
-            //     //         ],
-            //     //         loc,
-            //     //     )
-            //     // }
-            //     // x => unreachable!("Function call where the function was of unexpected type: {:?}", x),
-            // }
             //     todo!()
             // }
 
