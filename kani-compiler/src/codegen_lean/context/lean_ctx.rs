@@ -317,18 +317,178 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                 decls_stmt.push(stmt);
             }
         }
+        let mut visited_blocks:HashSet<BasicBlock> = HashSet::new();
 
+        let first_block = BasicBlock::from_usize(0);
         statements.extend(decls_stmt);
-        for (bb, bbd) in reverse_postorder(self.mir) {
-            if !self.visited_blocks.contains(&bb) {
-                println!("Generating code for block number: {:?}", bb); // Print the block number
-                statements.push(self.codegen_block(bb, bbd)); // Generate the statement and collect it
-            } else {
-                println!("SKIPPING regeneration of code for block number: {:?}", bb);
-            }
-        }
+        self.dfs_codegen_block(first_block, &mut visited_blocks, &mut statements, &mut vec![]);
         statements
     }
+
+    fn dfs_codegen_block(&mut self, bb: BasicBlock, visited_blocks: &mut std::collections::HashSet<BasicBlock>, statements: &mut Vec<Stmt>, switch_stack: &mut Vec<BasicBlock>) {
+        if !visited_blocks.insert(bb) {
+            println!("SKIPPING regeneration of code for block number: {:?}", bb);
+            return;
+        }
+
+        println!("Generating code for block number: {:?}", bb);
+        let block_stmt = self.codegen_block(bb, &self.mir[bb]);
+        statements.push(block_stmt);
+
+        let terminator = &self.mir[bb].terminator();
+        match &terminator.kind {
+            TerminatorKind::Goto { target } => {
+                self.dfs_codegen_block(*target, visited_blocks, statements, switch_stack);
+            },
+            TerminatorKind::SwitchInt { targets, discr } => {
+                // Mark the current block as a switch statement
+                switch_stack.push(bb); // Assuming bb is the switch block
+
+                // Process all targets of the switch
+                debug!(discr=?discr, targets=?targets, "codegen_switch_int");
+                let op = self.codegen_operand(discr);
+                println!("targets length {}", targets.iter().len());
+                if targets.all_targets().len() == 2 {
+                    let then = targets.iter().next().unwrap();
+                    self.visited_blocks.insert(then.1);
+                    let bbd_then = self.mir.basic_blocks[then.1].clone();
+                    let then_statements = match bbd_then.statements.len() {
+                        0 => {
+                            let term = bbd_then.terminator();
+                            let tcode = self.dfs_codegen_block(term);
+                            vec![tcode]
+                        }
+                        _ => {
+                            let mut then_statements: Vec<Stmt> = Vec::new();
+
+                            for stmt in &bbd_then.statements {
+                                println!("ADDING then_statements");
+                                let codegen_stmt = self.codegen_statement(stmt);
+                                then_statements.push(codegen_stmt);
+                            }
+                            if then_statements.is_empty() {
+                                println!("then_statements is empty");
+                            } else {
+                                println!("then_statements is NOT empty{}", then_statements.len());
+                            }
+                            if then_statements.is_empty() {
+                                println!("then_statements is empty");
+                            } else {
+                                println!("then_statements is NOT empty {}", then_statements.len());
+                            }
+                            println!("Generating code for THEN block number: {:?}", then.1);
+                            // then_statements.push(Stmt::Assignment {
+                            //     variable: "y".to_string(),
+                            //     typ: None,
+                            //     value: Expr::Literal(Literal::Int(2.into()))});
+                            then_statements
+                        }
+                    };
+                    let bbd_else = self.mir.basic_blocks[targets.otherwise()].clone();
+                    self.visited_blocks.insert(targets.otherwise());
+                    let else_statements = match bbd_else.statements.len() {
+                        0 => {
+                            let term = bbd_else.terminator();
+                            let tcode = self.dfs_codegen_block(term, &mut Default::default(), &mut vec![], &mut vec![]);
+                            vec![tcode]
+                        }
+                        _ => {
+
+                            let mut else_statements: Vec<Stmt> =
+                                bbd_else.statements.iter().map(|stmt| self.codegen_statement(stmt)).collect();
+                            // let term = self.dfs_codegen_block(bbd_else.terminator(), &mut Default::default(), &mut vec![], &mut vec![]);
+                            if else_statements.is_empty() {
+                                println!("else_statements is empty");
+                            } else {
+                                println!("else_statements is NOT empty {}", else_statements.len());
+                            }
+                            // match bbd_else.terminator().kind {
+                            //     TerminatorKind::Goto {target} => todo!(),
+                            //     TerminatorKind::SwitchInt { ref targets, .. } => todo!(),
+                            //     TerminatorKind::UnwindResume => todo!(),
+                            //     TerminatorKind::UnwindTerminate(_) => todo!(),
+                            //     TerminatorKind::Return => todo!(),
+                            //     TerminatorKind::Unreachable => todo!(),
+                            //     TerminatorKind::Drop { .. } => todo!(),
+                            //     TerminatorKind::Call { .. } => todo!(),
+                            //     TerminatorKind::Assert { .. } => todo!(),
+                            //     TerminatorKind::Yield { .. } => todo!(),
+                            //     TerminatorKind::CoroutineDrop => todo!(),
+                            //     TerminatorKind::FalseEdge { .. } => todo!(),
+                            //     TerminatorKind::FalseUnwind { .. } => todo!(),
+                            //     TerminatorKind::InlineAsm { .. } => todo!(),
+                            // }
+
+                            //return: bbk, success: bbj
+
+                            // else_statements.push(Stmt::Assignment {
+                            //     variable: "y".to_string(),
+                            //     typ: None,
+                            //     value: Expr::Literal(Literal::Int(2.into()))});
+                            if else_statements.is_empty() {
+                                println!("else_statements is empty");
+                            } else {
+                                println!("else_statements is NOT empty {}", else_statements.len());
+                            }
+                            println!("Generating code for ELSE block number: {:?}", targets.otherwise());
+                            else_statements
+                        }
+                    };
+
+                    let right = match self.operand_ty(discr).kind() {
+                        ty::Bool => Literal::Bool(then.0 != 0),
+                        ty::Uint(_) => Literal::Nat(then.0.into()),
+                        _ => unreachable!(),
+                    };
+                    // model as an if
+                    //     return Stmt::IfThenElse {
+                    //         cond: Expr::BinaryOp {
+                    //             op: BinaryOp::Eq,
+                    //             left: Box::new(op),
+                    //             right: Box::new(Expr::Literal(right)),
+                    //         },
+                    //         // then_branch: Box::new(Stmt::Goto { label: format!("{:?}", then.1) }),
+                    //
+                    //         //todo: I want to do codegenstatements here,
+                    //         // however, I have a block
+                    //         // So, I can do something like -- Block {statments}
+                    //
+                    //         then_branch: Box::new(Stmt::Block { statements }),
+                    //         else_branch: Some(Box::new(Stmt::Block { statements }),
+                    //     };
+                    // }
+                    // todo!()
+
+                    statements.push(Stmt::IfThenElse {
+                        cond: Expr::BinaryOp {
+                            op: BinaryOp::Eq,
+                            left: Box::new(op),
+                            right: Box::new(Expr::Literal(right)),
+                        },
+                        then_branch: Box::new(Stmt::Block { statements: then_statements }),
+                        else_branch: Some(Box::new(Stmt::Block { statements: else_statements })),
+                    });
+                }
+                // Once all targets are processed, remove the switch block from the stack
+                switch_stack.pop();
+            },
+            TerminatorKind::Return => {
+                // Directly handle return here if necessary
+            },
+            TerminatorKind::Call { destination, target, .. } => {
+                // Process call destination and target blocks, if present
+                // if let Some((place, destination)) = destination {
+                //     self.dfs_codegen_block(*destination, visited_blocks, statements, switch_stack);
+                // }
+                if let Some(target) = target {
+                    self.dfs_codegen_block(*target, visited_blocks, statements, switch_stack);
+                }
+            },
+            // Handle other terminator kinds as needed
+            _ => {}
+        }
+    }
+
 
     fn codegen_block(&mut self, bb: BasicBlock, bbd: &BasicBlockData<'tcx>) -> Stmt {
         debug!(?bb, ?bbd, "codegen_block");
@@ -352,6 +512,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         };
         Stmt::Block { statements }
     }
+
+
 
     // TODO: Done first pass
     fn codegen_statement(&mut self, stmt: &Statement<'tcx>) -> Stmt {
