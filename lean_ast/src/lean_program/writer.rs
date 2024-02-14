@@ -146,7 +146,7 @@ impl Stmt {
                     None => {
                         writer.indent()?;
                         write!(writer, "{} ", variable)?;
-                        println!("VAR{} := ", variable);
+                        // println!("VAR {} := ", variable);
                         write!(writer, ":= ")?;
                     }
                 }
@@ -160,9 +160,9 @@ impl Stmt {
             }
 
             Stmt::ArrayAssignment {variable, var_exp, value } => {
-                println!("ArrayAssignmentBeforeEnter{}", writer.indentation);
+                //println!("ArrayAssignmentBeforeEnter{}", writer.indentation);
                 writer.indent()?;
-                println!("ArrayAssignmentAfterEnter{}", writer.indentation);
+                //println!("ArrayAssignmentAfterEnter{}", writer.indentation);
                 write!(writer, "{} := ", variable)?;
                 write!(writer, "{} ", var_exp)?;
                 // print!("VAR{} := ", variable);
@@ -212,32 +212,30 @@ impl Stmt {
             //     writeln!(writer,"")?;
             // }
 
-
-            //todo: fix this -- remove pass
-            //Stmt::Skip => {writeln!(writer, "pass ")?;}
             Stmt::Skip => { }
             Stmt::IfThenElse {cond, then_branch, else_branch} => {
-                println!("BeforeIFthenIndent {}", writer.indentation);
+                 // println!("BeforeIFthenIndent {}", writer.indentation);
                 writer.indent()?;
-                println!("IFthenStartIndent {}", writer.indentation);
-                write!(writer, "if ")?;
+                // println!("IFthenStartIndent {}", writer.indentation);
+                //todo: update indices of the hypothesis to handle the case of multiple ifthenelse
+                write!(writer, "if h1 : ")?;
                 cond.write_to(writer)?;
                 writeln!(writer, " then")?;
                 writer.increase_indent();
-                println!("AfterthenIndent {}", writer.indentation);
+                // println!("AfterthenIndent {}", writer.indentation);
                 then_branch.write_to(writer)?;
                 writer.decrease_indent();
-                println!("AfterIFTHENIndent {}", writer.indentation);
+                // println!("AfterIFTHENIndent {}", writer.indentation);
                 if let Some(else_branch) = else_branch {
                     writer.indent()?;
-                    println!("BeforeElseIndent {}", writer.indentation);
+                    // println!("BeforeElseIndent {}", writer.indentation);
                     writeln!(writer, "else")?;
                     writer.increase_indent();
                     writer.increase_indent();
-                    println!("BeforeElseBlockIndent {}", writer.indentation);
+                    // println!("BeforeElseBlockIndent {}", writer.indentation);
                     else_branch.write_to(writer)?;
                     writer.decrease_indent();
-                    println!("AfterElseBlockIndent {}", writer.indentation);
+                    // println!("AfterElseBlockIndent {}", writer.indentation);
                 }
             }
             Stmt::Return {expr} => {

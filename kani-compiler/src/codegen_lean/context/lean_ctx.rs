@@ -78,7 +78,7 @@ impl<'tcx> LeanCtx<'tcx> {
         Some(Function::new(
             self.tcx.symbol_name(instance).name.to_string(),
             decl,
-            // todo: keep hypothesis separate? --  no these are just parameters
+            // todo: dont keep hypothesis separate -- these are just parameters
             None,
             //todo: return type an option - For specific cases now, hardcoded Except with String and Unit Type
             // however, in general, return type \alpha means we return Except String \alpha
@@ -321,11 +321,11 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
         statements.extend(decls_stmt);
         for (bb, bbd) in reverse_postorder(self.mir) {
             if !self.visited_blocks.contains(&bb) {
-                println!("Generating code for block number: {:?}", bb); // Print the block number
+                // println!("Generating code for block number: {:?}", bb); // Print the block number
                 statements.push(self.codegen_block(bb, bbd)); // Generate the statement and collect it
-            } else {
-                println!("SKIPPING regeneration of code for block number: {:?}", bb);
-            }
+            } //else {
+            //     println!("SKIPPING regeneration of code for block number: {:?}", bb);
+            // }
         }
         statements
     }
@@ -373,10 +373,10 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
 
                 debug!(?place, ?rvalue, "codegen_statement");
                 let place_name = self.local_name(place.local).clone();
-                println!("PLACE NAME: {}", place_name);
-                if (place_name == "_9") {
-                    println!("PLACE NAME: {}", place_name);
-                }
+                // println!("PLACE NAME: {}", place_name);
+                // if (place_name == "_9") {
+                //     println!("PLACE NAME: {}", place_name);
+                // }
                 if let Rvalue::Ref(_, _, rhs) = rvalue {
                     let expr = self.codegen_place(rhs);
                     self.ref_to_expr.insert(*place, expr);
@@ -416,8 +416,8 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                     let expr = self.ref_to_expr.get(&place).unwrap();
                     let rv = self.codegen_rvalue(rvalue);
                     //let asgn = Stmt::Assignment { variable: expr.to_string(), value: rv.1 };
-                    println!("PLACE NAME {}", place_name);
-                    println!("EXPR NAME {}", expr.to_string());
+                    // println!("PLACE NAME {}", place_name);
+                    // println!("EXPR NAME {}", expr.to_string());
                     let asgn = Stmt::ArrayAssignment { variable: place_name, var_exp: expr.to_string(), value: rv.1 };
                     add_statement(rv.0, asgn)
                 } else {
@@ -501,7 +501,7 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
     fn codegen_switch_int(& mut self, discr: &Operand<'tcx>, targets: &SwitchTargets) -> Stmt {
         debug!(discr=?discr, targets=?targets, "codegen_switch_int");
         let op = self.codegen_operand(discr);
-        println!("targets length {}", targets.iter().len());
+        // println!("targets length {}", targets.iter().len());
         if targets.all_targets().len() == 2 {
             let then = targets.iter().next().unwrap();
             self.visited_blocks.insert(then.1);
@@ -516,25 +516,25 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                     let mut then_statements: Vec<Stmt> = Vec::new();
 
                     for stmt in &bbd_then.statements {
-                        println!("ADDING then_statements");
+                        // println!("ADDING then_statements");
                         let codegen_stmt = self.codegen_statement(stmt);
                         then_statements.push(codegen_stmt);
                     }
 
 
-                    if then_statements.is_empty() {
-                        println!("then_statements is empty");
-                    } else {
-                        println!("then_statements is NOT empty{}", then_statements.len());
-                    }
+                    // if then_statements.is_empty() {
+                    //     println!("then_statements is empty");
+                    // } else {
+                    //     println!("then_statements is NOT empty{}", then_statements.len());
+                    // }
                     let term = self.codegen_terminator(bbd_then.terminator());
                     then_statements.push(term);
-                    if then_statements.is_empty() {
-                        println!("then_statements is empty");
-                    } else {
-                        println!("then_statements is NOT empty {}", then_statements.len());
-                    }
-                    println!("Generating code for THEN block number: {:?}", then.1);
+                    // if then_statements.is_empty() {
+                    //     println!("then_statements is empty");
+                    // } else {
+                    //     println!("then_statements is NOT empty {}", then_statements.len());
+                    // }
+                    // println!("Generating code for THEN block number: {:?}", then.1);
                     // then_statements.push(Stmt::Assignment {
                     //     variable: "y".to_string(),
                     //     typ: None,
@@ -555,11 +555,11 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                     let mut else_statements: Vec<Stmt> =
                         bbd_else.statements.iter().map(|stmt| self.codegen_statement(stmt)).collect();
                     let term = self.codegen_terminator(bbd_else.terminator());
-                    if else_statements.is_empty() {
-                        println!("else_statements is empty");
-                    } else {
-                        println!("else_statements is NOT empty {}", else_statements.len());
-                    }
+                    // if else_statements.is_empty() {
+                    //     println!("else_statements is empty");
+                    // } else {
+                    //     println!("else_statements is NOT empty {}", else_statements.len());
+                    // }
                     else_statements.push(term);
                     // match bbd_else.terminator().kind {
                     //     TerminatorKind::Goto {target} => todo!(),
@@ -584,12 +584,12 @@ impl<'a, 'tcx> FunctionCtx<'a, 'tcx> {
                     //     variable: "y".to_string(),
                     //     typ: None,
                     //     value: Expr::Literal(Literal::Int(2.into()))});
-                    if else_statements.is_empty() {
-                        println!("else_statements is empty");
-                    } else {
-                        println!("else_statements is NOT empty {}", else_statements.len());
-                    }
-                    println!("Generating code for ELSE block number: {:?}", targets.otherwise());
+                    // if else_statements.is_empty() {
+                    //     println!("else_statements is empty");
+                    // } else {
+                    //     println!("else_statements is NOT empty {}", else_statements.len());
+                    // }
+                    // println!("Generating code for ELSE block number: {:?}", targets.otherwise());
                     else_statements
                 }
             };
