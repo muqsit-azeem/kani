@@ -197,21 +197,6 @@ impl Stmt {
                     s.write_to(writer)?;
                 }
             }
-            // Stmt::FunctionCall {name, arguments} => {
-            //     writer.indent()?;
-            //     //todo: remove hardcoding of _0 := and find work around
-            //     // see github issue: https://github.com/rust-lang/rust/issues/71117
-            //     // write!(writer, "{} ", name)?;
-            //     write!(writer, "_0 := {} ", name)?;
-            //     for (i, a) in arguments.iter().enumerate() {
-            //         if i>0 {
-            //             write!(writer, " ")?;
-            //         }
-            //         a.write_to(writer)?;
-            //     }
-            //     writeln!(writer,"")?;
-            // }
-
             Stmt::Skip => { }
             Stmt::IfThenElse {cond, then_branch, else_branch} => {
                  // println!("BeforeIFthenIndent {}", writer.indentation);
