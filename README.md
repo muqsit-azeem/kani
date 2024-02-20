@@ -25,8 +25,9 @@ cargo kani -Zlean
 ```
 
 Kani will output the path to the generated Lean4 file, for example:
+```
 Writing Lean4 file to /home/ubuntu/test1_main.lean
-
+```
 
 You will need to manually write properties on the translated program and use the Lean4 theorem prover to perform verification.
 
