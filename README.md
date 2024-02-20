@@ -1,54 +1,39 @@
 ![](./kani-logo.png)
-[![Kani regression](https://github.com/model-checking/kani/actions/workflows/kani.yml/badge.svg)](https://github.com/model-checking/kani/actions/workflows/kani.yml)
-[![Nightly: CBMC Latest](https://github.com/model-checking/kani/actions/workflows/cbmc-latest.yml/badge.svg)](https://github.com/model-checking/kani/actions/workflows/cbmc-latest.yml)
 
-The Kani Rust Verifier is a bit-precise model checker for Rust.
+**Experimental Lean4 Backend for Kani**
 
-Kani is particularly useful for verifying unsafe code blocks in Rust, where the "[unsafe superpowers](https://doc.rust-lang.org/stable/book/ch19-01-unsafe-rust.html#unsafe-superpowers)" are unchecked by the compiler.
-___
-Kani verifies:
- * Memory safety (e.g., null pointer dereferences)
- * User-specified assertions (i.e., `assert!(...)`)
- * The absence of panics (e.g., `unwrap()` on `None` values)
- * The absence of some types of unexpected behavior (e.g., arithmetic overflows)
+This branch introduces an experimental Lean4-based backend to Kani. If you're searching for the main version of Kani, please visit our [main GitHub repository](https://github.com/model-checking/kani).
 
-## Installation
+Unlike the main Kani version that translates [MIR](https://blog.rust-lang.org/2016/04/19/MIR.html) to Goto and uses CBMC for verification, this branch offers a translation from MIR to [Lean4](https://github.com/leanprover/lean4) for verification with the Lean4 theorem prover. Currently, it supports a limited subset of Rust.
 
-To install the latest version of Kani ([Rust 1.58+; Linux or Mac](https://model-checking.github.io/kani/install-guide.html)), run:
+Since the Lean4 backend is not included in Kani's [official releases](https://github.com/model-checking/kani/releases), you'll need to clone this branch and build it from source. For detailed instructions, please refer to the [Installing from source code](https://model-checking.github.io/kani/build-from-source.html) section in our documentation.
+
+## Prerequisites
+
+Ensure you have the Lean4 theorem prover installed on your system. You can find the installation instructions at [Lean4's GitHub page](https://github.com/leanprover/lean4#installation).
+
+## Using the Lean4 Backend
+
+To utilize the Lean4 backend, include the `-Zlean` option when running the Kani command, like so:
 
 ```bash
-cargo install --locked kani-verifier
-cargo kani setup
+kani test.rs -Zlean
+```
+or 
+```
+cargo kani -Zlean
 ```
 
-See [the installation guide](https://model-checking.github.io/kani/install-guide.html) for more details.
+Kani will output the path to the generated Lean4 file, for example:
+Writing Lean4 file to /home/ubuntu/test1_main.lean
 
-## How to use Kani
 
-Similar to testing, you write a harness, but with Kani you can check all possible values using `kani::any()`:
+You will need to manually write properties on the translated program and use the Lean4 theorem prover to perform verification.
 
-```rust
-use my_crate::{function_under_test, meets_specification, precondition};
+## Example
+TODO
 
-#[kani::proof]
-fn check_my_property() {
-   // Create a nondeterministic input
-   let input = kani::any();
 
-   // Constrain it according to the function's precondition
-   kani::assume(precondition(input));
-
-   // Call the function under verification
-   let output = function_under_test(input);
-
-   // Check that it meets the specification
-   assert!(meets_specification(input, output));
-}
-```
-
-Kani will then try to prove that all valid inputs produce acceptable outputs, without panicking or executing unexpected behavior.
-Otherwise Kani will generate a trace that points to the failure.
-We recommend following [the tutorial](https://model-checking.github.io/kani/kani-tutorial.html) to learn more about how to use Kani.
 
 ## GitHub Action
 
