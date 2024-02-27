@@ -32,8 +32,62 @@ Writing Lean4 file to /home/ubuntu/test1_main.lean
 You will need to manually write properties on the translated program and use the Lean4 theorem prover to perform verification.
 
 ## Example
-TODO
+The following array example 
+```
+fn set_elements(mut arr: kani::array::Array<i32>, mut index:usize) -> kani::array::Array<i32> {
+    if index < arr.len() {
+        arr[index] = 1;
+        return set_elements(arr, index+1);
+    } else {
+        return arr;
+    }
+}
 
+
+pub fn set_one(mut arr: kani::array::Array<i32>) -> kani::array::Array<i32> {
+    set_elements(arr, 0)
+}
+
+```
+using the command 
+```
+./scripts/kani -Zlean lean-array-set-1.rs --function set_one --enable-unstable
+```
+is translated to the following:
+```
+-- Functions definition:
+def _RNvCsa8IeKRf3yLd_16lean_array_set_112set_elements (arr: Array Int) (index: Nat) : Array Int := Id.run do
+  let mut _0 : Array Int := #[0]
+  let mut arr : Array Int := arr
+  let mut index : Nat := index
+  let mut _3 : Bool := true
+  let mut _4 : Nat := 0
+  let mut _5 : Array Int := #[0]
+  let mut _6 : Int := 1
+  let mut _7 : Array Int := #[0]
+  let mut _8 : Array Int := #[0]
+  let mut _9 : Nat := 0
+  let mut _10 : Nat := 0
+  _4 := arr.size
+  _3 := index < _4
+  if h1 : _3 = false then
+    _0 := arr
+    return _0
+  else
+    arr := arr.set! index 1
+    _8 := arr
+    _10 := index + 1
+    _9 := _10
+    _0 := _RNvCsa8IeKRf3yLd_16lean_array_set_112set_elements _8 _9
+    return _0
+
+def _RNvCsa8IeKRf3yLd_16lean_array_set_17set_one (arr: Array Int) : Array Int := Id.run do
+  let mut _0 : Array Int := #[0]
+  let mut arr : Array Int := arr
+  _0 := _RNvCsa8IeKRf3yLd_16lean_array_set_112set_elements arr 0
+  return _0
+
+```
 
 ## Directory Structure
 TODO
